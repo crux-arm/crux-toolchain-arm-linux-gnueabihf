@@ -132,7 +132,8 @@ $(WORK)/binutils-$(BINUTILS_VERSION).tar.bz2:
 
 $(WORK)/binutils-$(BINUTILS_VERSION): $(WORK)/binutils-$(BINUTILS_VERSION).tar.bz2
 	tar -C $(WORK) -xvjf $(WORK)/binutils-$(BINUTILS_VERSION).tar.bz2
-	sed -i '/^SUBDIRS/s/doc//' $(WORK)/binutils-$(BINUTILS_VERSION)/*/Makefile.in
+	cd $(WORK)/binutils-$(BINUTILS_VERSION) && \
+		patch -p1 -i $(WORK)/binutils-$(BINUTILS_VERSION)-gnueabihf.patch
 	touch $(WORK)/binutils-$(BINUTILS_VERSION)
 
 $(WORK)/build-binutils: $(WORK)/binutils-$(BINUTILS_VERSION)
@@ -145,7 +146,7 @@ $(CLFS)/usr/include/libiberty.h: $(WORK)/build-binutils
 		AR=ar AS=as \
 		$(WORK)/binutils-$(BINUTILS_VERSION)/configure --prefix=$(CROSSTOOLS) \
 		--host=$(HOST) --target=$(TARGET) --with-sysroot=$(CLFS) \
-		--disable-nls --enable-shared --disable-multilib --nfp && \
+		--disable-nls --enable-shared --disable-multilib --enable-interwork && \
 		make configure-host && make && make install || exit 1
 	cp -va $(WORK)/binutils-$(BINUTILS_VERSION)/include/libiberty.h $(CLFS)/usr/include
 	touch $(CLFS)/usr/include/libiberty.h
@@ -165,6 +166,8 @@ $(WORK)/gcc-$(GCC_VERSION).tar.bz2:
 
 $(WORK)/gcc-$(GCC_VERSION): $(WORK)/gcc-$(GCC_VERSION).tar.bz2
 	tar -C $(WORK) -xvjf $(WORK)/gcc-$(GCC_VERSION).tar.bz2
+	cd $(WORK)/gcc-$(GCC_VERSION) && \
+		patch -p1 -i $(WORK)/gcc-$(GCC_VERSION)-gnueabihf.patch
 	touch $(WORK)/gcc-$(GCC_VERSION)
 
 $(WORK)/build-gcc-static: $(WORK)/gcc-$(GCC_VERSION)
@@ -178,12 +181,12 @@ $(CROSSTOOLS)/lib/gcc: $(WORK)/build-gcc-static $(WORK)/gcc-$(GCC_VERSION)
 		$(WORK)/gcc-$(GCC_VERSION)/configure --prefix=$(CROSSTOOLS) \
 		--build=$(HOST) --host=$(HOST) --target=$(TARGET) \
 		--disable-multilib --disable-nls \
-		--without-headers --enable-__cxa_atexit --enable-symvers=gnu --disable-decimal-float \
-		--nfp --without-fp --with-softfloat-support=internal \
+		--without-headers --disable-decimal-float \
 		--disable-libgomp --disable-libmudflap --disable-libssp \
 		--with-mpfr=$(CROSSTOOLS) --with-gmp=$(CROSSTOOLS) --with-mpc=$(CROSSTOOLS) \
-		--disable-shared --disable-threads --enable-languages=c && \
-		make && make install || exit 1
+		--disable-shared --disable-threads --enable-languages=c \
+		--with-abi=aapcs-linux --with-arch=armv7-a --with-mode=thumb --with-float=hard --with-fpu=vfpv3-d16 && \
+		make all-gcc all-target-libgcc && make install-gcc install-target-libgcc || exit 1
 	touch $(CROSSTOOLS)/lib/gcc
 
 gcc-static: linux-headers libgmp libmpfr binutils $(CROSSTOOLS)/lib/gcc
@@ -206,8 +209,9 @@ $(WORK)/glibc-$(GLIBC_VERSION): $(WORK)/glibc-$(GLIBC_VERSION).tar.bz2 $(WORK)/g
 	tar -C $(WORK) -xvjf $(WORK)/glibc-$(GLIBC_VERSION).tar.bz2
 	cd $(WORK)/glibc-$(GLIBC_VERSION) && \
 		tar xvjf $(WORK)/glibc-ports-$(GLIBC_VERSION).tar.bz2 && \
-		patch -p1 -i $(WORK)/glibc-$(GLIBC_VERSION)-pot.patch && \
 		mv glibc-ports-$(GLIBC_VERSION) ports && \
+		patch -p1 -i $(WORK)/glibc-$(GLIBC_VERSION)-gnueabihf.patch && \
+		patch -p1 -i $(WORK)/glibc-$(GLIBC_VERSION)-prelink.patch && \
 		sed -e 's/-lgcc_eh//g' -i Makeconfig
 	touch $(WORK)/glibc-$(GLIBC_VERSION)
 
@@ -228,7 +232,7 @@ $(CLFS)/usr/lib/libc.so: $(WORK)/build-glibc $(WORK)/glibc-$(GLIBC_VERSION)
 		$(WORK)/glibc-$(GLIBC_VERSION)/configure --prefix=/usr \
 		--libexecdir=/usr/lib/glibc --host=$(TARGET) --build=$(HOST) \
 		--disable-profile --enable-add-ons --with-tls --enable-kernel=2.6.0 \
-		--with-__thread --with-binutils=$(CROSSTOOLS)/bin --with-fp=no \
+		--with-__thread --with-binutils=$(CROSSTOOLS)/bin --with-fp=yes \
 		--with-headers=$(CLFS)/usr/include --cache-file=config.cache && \
 		make && make install || exit 1
 	touch $(CLFS)/usr/lib/libc.so
@@ -254,11 +258,11 @@ $(CLFS)/lib/gcc: $(WORK)/build-gcc-final $(WORK)/gcc-$(GCC_VERSION)
 		AR=ar LDFLAGS="-Wl,-rpath,$(CROSSTOOLS)/lib" \
 		$(WORK)/gcc-$(GCC_VERSION)/configure --prefix=$(CROSSTOOLS) \
 		--build=$(HOST) --host=$(HOST) --target=$(TARGET) \
-		--with-fp=no --with-headers=$(CLFS)/usr/include \
+		--with-headers=$(CLFS)/usr/include --enable-shared  \
 		--disable-multilib --with-sysroot=$(CLFS) --disable-nls \
-		--enable-languages=c,c++ --enable-__cxa_atexit \
+		--enable-languages=c,c++ --enable-c99 --enable-long-long --enable-threads=posix \
 		--with-mpfr=$(CROSSTOOLS) --with-gmp=$(CROSSTOOLS) --with-mpc=$(CROSSTOOLS) \
-		--enable-c99 --enable-long-long --enable-threads=posix && \
+		--with-abi=aapcs-linux --with-arch=armv7-a --with-mode=thumb --with-float=hard --with-fpu=vfpv3-d16 && \
 		make AS_FOR_TARGET="$(TARGET)-as" LD_FOR_TARGET="$(TARGET)-ld" && \
 		make install || exit 1
 	touch $(CLFS)/lib/gcc
