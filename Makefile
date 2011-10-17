@@ -181,7 +181,7 @@ $(CROSSTOOLS)/lib/gcc: $(WORK)/build-gcc-static $(WORK)/gcc-$(GCC_VERSION)
 		$(WORK)/gcc-$(GCC_VERSION)/configure --prefix=$(CROSSTOOLS) \
 		--build=$(HOST) --host=$(HOST) --target=$(TARGET) \
 		--disable-multilib --disable-nls \
-		--without-headers --disable-decimal-float \
+		--without-headers --enable-__cxa_atexit --enable-symvers=gnu --disable-decimal-float \
 		--disable-libgomp --disable-libmudflap --disable-libssp \
 		--with-mpfr=$(CROSSTOOLS) --with-gmp=$(CROSSTOOLS) --with-mpc=$(CROSSTOOLS) \
 		--disable-shared --disable-threads --enable-languages=c \
@@ -260,7 +260,7 @@ $(CLFS)/lib/gcc: $(WORK)/build-gcc-final $(WORK)/gcc-$(GCC_VERSION)
 		--build=$(HOST) --host=$(HOST) --target=$(TARGET) \
 		--with-headers=$(CLFS)/usr/include --enable-shared  \
 		--disable-multilib --with-sysroot=$(CLFS) --disable-nls \
-		--enable-languages=c,c++ --enable-c99 --enable-long-long --enable-threads=posix \
+		--enable-languages=c,c++ --enable-__cxa_atexit --enable-c99 --enable-long-long --enable-threads=posix \
 		--with-mpfr=$(CROSSTOOLS) --with-gmp=$(CROSSTOOLS) --with-mpc=$(CROSSTOOLS) \
 		--with-abi=aapcs-linux --with-arch=armv7-a --with-mode=thumb --with-float=hard --with-fpu=vfpv3-d16 && \
 		make AS_FOR_TARGET="$(TARGET)-as" LD_FOR_TARGET="$(TARGET)-ld" && \
