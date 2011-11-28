@@ -185,7 +185,7 @@ $(CROSSTOOLS)/lib/gcc: $(WORK)/build-gcc-static $(WORK)/gcc-$(GCC_VERSION)
 		--disable-libgomp --disable-libmudflap --disable-libssp \
 		--with-mpfr=$(CROSSTOOLS) --with-gmp=$(CROSSTOOLS) --with-mpc=$(CROSSTOOLS) \
 		--disable-shared --disable-threads --enable-languages=c \
-		--with-abi=aapcs-linux --with-arch=armv7-a --with-mode=thumb --with-float=hard --with-fpu=vfpv3-d16 && \
+		--with-abi=$(ABI) --with-arch=$(ARCH) --with-mode=$(MODE) --with-float=$(FLOAT) --with-fpu=$(FPU) && \
 		make all-gcc all-target-libgcc && make install-gcc install-target-libgcc || exit 1
 	touch $(CROSSTOOLS)/lib/gcc
 
@@ -262,7 +262,7 @@ $(CLFS)/lib/gcc: $(WORK)/build-gcc-final $(WORK)/gcc-$(GCC_VERSION)
 		--disable-multilib --with-sysroot=$(CLFS) --disable-nls \
 		--enable-languages=c,c++ --enable-__cxa_atexit --enable-c99 --enable-long-long --enable-threads=posix \
 		--with-mpfr=$(CROSSTOOLS) --with-gmp=$(CROSSTOOLS) --with-mpc=$(CROSSTOOLS) \
-		--with-abi=aapcs-linux --with-arch=armv7-a --with-mode=thumb --with-float=hard --with-fpu=vfpv3-d16 && \
+		--with-abi=$(ABI) --with-arch=$(ARCH) --with-mode=$(MODE) --with-float=$(FLOAT) --with-fpu=$(FPU) && \
 		make AS_FOR_TARGET="$(TARGET)-as" LD_FOR_TARGET="$(TARGET)-ld" && \
 		make install || exit 1
 	touch $(CLFS)/lib/gcc

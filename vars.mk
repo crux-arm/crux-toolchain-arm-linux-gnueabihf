@@ -18,4 +18,11 @@ BINUTILS_VERSION = 2.21.1
 GCC_VERSION = 4.6.1
 GLIBC_VERSION = 2.13
 
+# Hardfp EfikaMX imx51
+ABI = aapcs-linux
+ARCH = armv7-a
+FPU = vfpv3-d16
+MODE = thumb
+FLOAT = hard
+
 # End of file
