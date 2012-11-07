@@ -15,7 +15,7 @@ distclean: clean linux-headers-distclean libgmp-distclean libmpfr-distclean libm
 
 # LINUX HEADERS
 $(WORK)/linux-$(KERNEL_HEADERS_VERSION).tar.bz2:
-	wget -P $(WORK) -c ftp://ftp.kernel.org/pub/linux/kernel/v2.6/linux-$(KERNEL_HEADERS_VERSION).tar.bz2
+	wget -P $(WORK) -c ftp://ftp.kernel.org/pub/linux/kernel/v3.0/linux-$(KERNEL_HEADERS_VERSION).tar.bz2
 
 $(WORK)/linux-$(KERNEL_HEADERS_VERSION): $(WORK)/linux-$(KERNEL_HEADERS_VERSION).tar.bz2
 	tar -C $(WORK) -xvjf $(WORK)/linux-$(KERNEL_HEADERS_VERSION).tar.bz2
@@ -71,8 +71,10 @@ libgmp-distclean: libgmp-clean
 $(WORK)/mpfr-$(LIBMPFR_VERSION).tar.bz2:
 	wget -P $(WORK) -c http://ftp.gnu.org/gnu/mpfr/mpfr-$(LIBMPFR_VERSION).tar.bz2
 
-$(WORK)/mpfr-$(LIBMPFR_VERSION): $(WORK)/mpfr-$(LIBMPFR_VERSION).tar.bz2
+$(WORK)/mpfr-$(LIBMPFR_VERSION): $(WORK)/mpfr-$(LIBMPFR_VERSION).tar.bz2 $(WORK)/libmpfr-3.1.1-p2.patch.gz
 	tar -C $(WORK) -xvjf $(WORK)/mpfr-$(LIBMPFR_VERSION).tar.bz2
+	cd $(WORK)/mpfr-$(LIBMPFR_VERSION) && \
+		gunzip -c $(WORK)/libmpfr-$(LIBMPFR_VERSION)-p2.patch.gz | patch -p1
 	touch $(WORK)/mpfr-$(LIBMPFR_VERSION)
 
 $(WORK)/build-libmpfr: $(WORK)/mpfr-$(LIBMPFR_VERSION)
@@ -132,8 +134,7 @@ $(WORK)/binutils-$(BINUTILS_VERSION).tar.bz2:
 
 $(WORK)/binutils-$(BINUTILS_VERSION): $(WORK)/binutils-$(BINUTILS_VERSION).tar.bz2
 	tar -C $(WORK) -xvjf $(WORK)/binutils-$(BINUTILS_VERSION).tar.bz2
-	cd $(WORK)/binutils-$(BINUTILS_VERSION) && \
-		patch -p1 -i $(WORK)/binutils-$(BINUTILS_VERSION)-gnueabihf.patch
+	sed -i '/^SUBDIRS/s/doc//' $(WORK)/binutils-$(BINUTILS_VERSION)/*/Makefile.in
 	touch $(WORK)/binutils-$(BINUTILS_VERSION)
 
 $(WORK)/build-binutils: $(WORK)/binutils-$(BINUTILS_VERSION)
@@ -184,7 +185,7 @@ $(CROSSTOOLS)/lib/gcc: $(WORK)/build-gcc-static $(WORK)/gcc-$(GCC_VERSION)
 		--without-headers --enable-__cxa_atexit --enable-symvers=gnu --disable-decimal-float \
 		--disable-libgomp --disable-libmudflap --disable-libssp \
 		--with-mpfr=$(CROSSTOOLS) --with-gmp=$(CROSSTOOLS) --with-mpc=$(CROSSTOOLS) \
-		--disable-shared --disable-threads --enable-languages=c \
+		--disable-shared --disable-threads --enable-languages=c --disable-libquadmath \
 		--with-abi=$(ABI) --with-arch=$(ARCH) --with-mode=$(MODE) --with-float=$(FLOAT) --with-fpu=$(FPU) && \
 		make all-gcc all-target-libgcc && make install-gcc install-target-libgcc || exit 1
 	touch $(CROSSTOOLS)/lib/gcc
@@ -210,9 +211,7 @@ $(WORK)/glibc-$(GLIBC_VERSION): $(WORK)/glibc-$(GLIBC_VERSION).tar.bz2 $(WORK)/g
 	cd $(WORK)/glibc-$(GLIBC_VERSION) && \
 		tar xvjf $(WORK)/glibc-ports-$(GLIBC_VERSION).tar.bz2 && \
 		mv glibc-ports-$(GLIBC_VERSION) ports && \
-		patch -p1 -i $(WORK)/glibc-$(GLIBC_VERSION)-gnueabihf.patch && \
-		patch -p1 -i $(WORK)/glibc-$(GLIBC_VERSION)-prelink.patch && \
-		sed -e 's/-lgcc_eh//g' -i Makeconfig
+		sed -e 's/-lgcc_eh//g' -e 's/-lgcc_s//g' -i Makeconfig
 	touch $(WORK)/glibc-$(GLIBC_VERSION)
 
 $(WORK)/build-glibc: $(WORK)/glibc-$(GLIBC_VERSION)
@@ -225,6 +224,7 @@ $(CLFS)/usr/lib/libc.so: $(WORK)/build-glibc $(WORK)/glibc-$(GLIBC_VERSION)
 		echo "libc_cv_forced_unwind=yes" > config.cache && \
 		echo "libc_cv_c_cleanup=yes" >> config.cache && \
 		echo "libc_cv_gnu89_inline=yes" >> config.cache && \
+		echo "libc_cv_ctors_header=yes" >> config.cache && \
 		echo "install_root=$(CLFS)" > configparms && \
 		unset CFLAGS && unset CXXFLAGS && \
 		BUILD_CC="gcc" CC="$(TARGET)-gcc" AR="$(TARGET)-ar" \
@@ -260,7 +260,8 @@ $(CLFS)/lib/gcc: $(WORK)/build-gcc-final $(WORK)/gcc-$(GCC_VERSION)
 		--build=$(HOST) --host=$(HOST) --target=$(TARGET) \
 		--with-headers=$(CLFS)/usr/include --enable-shared  \
 		--disable-multilib --with-sysroot=$(CLFS) --disable-nls \
-		--enable-languages=c,c++ --enable-__cxa_atexit --enable-c99 --enable-long-long --enable-threads=posix \
+		--enable-languages=c,c++ --enable-__cxa_atexit \
+		--enable-threads=posix --disable-libstdcxx-pch --disable-bootstrap --disable-libgomp \
 		--with-mpfr=$(CROSSTOOLS) --with-gmp=$(CROSSTOOLS) --with-mpc=$(CROSSTOOLS) \
 		--with-abi=$(ABI) --with-arch=$(ARCH) --with-mode=$(MODE) --with-float=$(FLOAT) --with-fpu=$(FPU) && \
 		make AS_FOR_TARGET="$(TARGET)-as" LD_FOR_TARGET="$(TARGET)-ld" && \
