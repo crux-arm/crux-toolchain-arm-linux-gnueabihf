@@ -133,3 +133,19 @@ diff -pruN gcc-4.7.2.orig/libstdc++-v3/configure.host gcc-4.7.2/libstdc++-v3/con
  	port_specific_symbol_files="\$(srcdir)/../config/os/gnu-linux/arm-eabi-extra.ver"
  	;;
      esac
+diff -pruN gcc-4.7.2.orig/gcc/config/arm/linux-eabi.h gcc-4.7.2/gcc/config/arm/linux-eabi.h
+--- gcc-4.7.2.orig/gcc/config/arm/linux-eabi.h 2012-11-26 14:44:44.335493878 +0000
++++ gcc-4.7.2/gcc/config/arm/linux-eabi.h      2012-11-26 14:55:06.599515067 +0000
+@@ -62,7 +62,11 @@
+ /* Use ld-linux.so.3 so that it will be possible to run "classic"
+    GNU/Linux binaries on an EABI system.  */
+ #undef  GLIBC_DYNAMIC_LINKER
+-#define GLIBC_DYNAMIC_LINKER "/lib/ld-linux.so.3"
++#define GLIBC_DYNAMIC_LINKER_SOFT_FLOAT "/lib/ld-linux.so.3"
++#define GLIBC_DYNAMIC_LINKER_HARD_FLOAT "/lib/ld-linux-armhf.so.3"
++#define GLIBC_DYNAMIC_LINKER \
++   "%{mfloat-abi=hard:" GLIBC_DYNAMIC_LINKER_HARD_FLOAT "} \
++    %{!mfloat-abi=hard:" GLIBC_DYNAMIC_LINKER_SOFT_FLOAT "}"
+
+ /* At this point, bpabi.h will have clobbered LINK_SPEC.  We want to
+    use the GNU/Linux version, not the generic BPABI version.  */
