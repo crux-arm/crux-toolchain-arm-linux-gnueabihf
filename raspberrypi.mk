@@ -2,7 +2,7 @@
 ABI = aapcs-linux
 ARCH = armv6zk
 FPU = vfp
-MODE = thumb
+MODE = arm
 FLOAT = hard
 
 # End of file
