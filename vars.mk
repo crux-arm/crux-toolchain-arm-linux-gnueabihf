@@ -18,8 +18,8 @@ BINUTILS_VERSION = 2.22
 GCC_VERSION = 4.7.2
 GLIBC_VERSION = 2.16.0
 
-# Optimizations per device: generic/efikamx/raspberrypi
-DEVICE=generic
-include $(TOPDIR)/$(DEVICE).mk
+ABI = aapcs-linux
+MODE = arm
+FLOAT = hard
 
 # End of file
