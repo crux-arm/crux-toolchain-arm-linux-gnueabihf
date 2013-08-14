@@ -305,12 +305,14 @@ libtool-clean:
 libtool-distclean:
 	rm -vf $(WORK)/libtool-$(LIBTOOL_VERSION).tar.xz
 
-# SETUP FOR PKGUTILS
+
+# SETUP FOR PKGUTILS-CROSS
 $(CLFS)/var/lib/pkg/db:
 	install -d -m 0755 $(CLFS)/var/lib/pkg
 	touch $(CLFS)/var/lib/pkg/db
 
 setup: $(CLFS)/var/lib/pkg/db
+
 
 # TEST THE TOOLCHAIN
 $(WORK)/test: $(WORK)/test.c
@@ -327,5 +329,6 @@ test-clean:
 	rm -vrf $(WORK)/test
 
 test-distclean: test-clean
+
 
 # End of file
