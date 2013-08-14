@@ -71,10 +71,8 @@ libgmp-distclean: libgmp-clean
 $(WORK)/mpfr-$(LIBMPFR_VERSION).tar.bz2:
 	wget -P $(WORK) -c http://ftp.gnu.org/gnu/mpfr/mpfr-$(LIBMPFR_VERSION).tar.bz2
 
-$(WORK)/mpfr-$(LIBMPFR_VERSION): $(WORK)/mpfr-$(LIBMPFR_VERSION).tar.bz2 $(WORK)/libmpfr-3.1.1-p2.patch.gz
+$(WORK)/mpfr-$(LIBMPFR_VERSION): $(WORK)/mpfr-$(LIBMPFR_VERSION).tar.bz2
 	tar -C $(WORK) -xvjf $(WORK)/mpfr-$(LIBMPFR_VERSION).tar.bz2
-	cd $(WORK)/mpfr-$(LIBMPFR_VERSION) && \
-		gunzip -c $(WORK)/libmpfr-$(LIBMPFR_VERSION)-p2.patch.gz | patch -p1
 	touch $(WORK)/mpfr-$(LIBMPFR_VERSION)
 
 $(WORK)/build-libmpfr: $(WORK)/mpfr-$(LIBMPFR_VERSION)
@@ -133,7 +131,7 @@ $(WORK)/binutils-$(BINUTILS_VERSION).tar.bz2:
 	wget -P $(WORK) -c ftp://ftp.gnu.org/gnu/binutils/binutils-$(BINUTILS_VERSION).tar.bz2
 
 $(WORK)/binutils-$(BINUTILS_VERSION): $(WORK)/binutils-$(BINUTILS_VERSION).tar.bz2
-	tar -C $(WORK) -xvjf $(WORK)/binutils-$(BINUTILS_VERSION).tar.bz2
+	tar -C $(WORK) -xvf $(WORK)/binutils-$(BINUTILS_VERSION).tar.bz2
 	sed -i '/^SUBDIRS/s/doc//' $(WORK)/binutils-$(BINUTILS_VERSION)/*/Makefile.in
 	touch $(WORK)/binutils-$(BINUTILS_VERSION)
 
@@ -165,7 +163,7 @@ binutils-distclean: binutils-clean
 $(WORK)/gcc-$(GCC_VERSION).tar.bz2:
 	wget -P $(WORK) -c ftp://sources.redhat.com/pub/gcc/releases/gcc-$(GCC_VERSION)/gcc-$(GCC_VERSION).tar.bz2
 
-$(WORK)/gcc-$(GCC_VERSION): $(WORK)/gcc-$(GCC_VERSION).tar.bz2
+$(WORK)/gcc-$(GCC_VERSION): $(WORK)/gcc-$(GCC_VERSION).tar.bz2 $(WORK)/gcc-$(GCC_VERSION)-gnueabihf.patch
 	tar -C $(WORK) -xvjf $(WORK)/gcc-$(GCC_VERSION).tar.bz2
 	cd $(WORK)/gcc-$(GCC_VERSION) && \
 		patch -p1 -i $(WORK)/gcc-$(GCC_VERSION)-gnueabihf.patch
@@ -232,7 +230,7 @@ $(CLFS)/usr/lib/libc.so: $(WORK)/build-glibc $(WORK)/glibc-$(GLIBC_VERSION)
 		$(WORK)/glibc-$(GLIBC_VERSION)/configure --prefix=/usr \
 		--libexecdir=/usr/lib/glibc --host=$(TARGET) --build=$(HOST) \
 		--disable-profile --enable-add-ons --with-tls --enable-kernel=2.6.0 \
-		--with-__thread --with-binutils=$(CROSSTOOLS)/bin --with-fp=yes \
+		--with-__thread --with-binutils=$(CROSSTOOLS)/bin --with-fp=yes --enable-obsolete-rpc \
 		--with-headers=$(CLFS)/usr/include --cache-file=config.cache && \
 		make && make install || exit 1
 	touch $(CLFS)/usr/lib/libc.so
