@@ -6,11 +6,11 @@ include vars.mk
 
 .PHONY: all clean distclean
 
-all: linux-headers libgmp libmpfr libmpc binutils gcc-static glibc gcc-final setup test
+all: linux-headers libgmp libmpfr libmpc binutils gcc-static glibc gcc-final libtool setup test
 
-clean: linux-headers-clean libgmp-clean libmpfr-clean libmpc-clean binutils-clean gcc-static-clean glibc-clean gcc-final-clean test-clean
+clean: linux-headers-clean libgmp-clean libmpfr-clean libmpc-clean binutils-clean gcc-static-clean glibc-clean gcc-final-clean libtool-clean test-clean
 
-distclean: clean linux-headers-distclean libgmp-distclean libmpfr-distclean libmpc-distclean binutils-distclean gcc-static-distclean glibc-distclean gcc-final-distclean test-distclean
+distclean: clean linux-headers-distclean libgmp-distclean libmpfr-distclean libmpc-distclean binutils-distclean gcc-static-distclean glibc-distclean gcc-final-distclean libtool-distclean test-distclean
 
 
 # LINUX HEADERS
@@ -137,7 +137,7 @@ $(WORK)/binutils-$(BINUTILS_VERSION): $(WORK)/binutils-$(BINUTILS_VERSION).tar.b
 
 $(WORK)/build-binutils: $(WORK)/binutils-$(BINUTILS_VERSION)
 	mkdir -p $(WORK)/build-binutils
-	touch $(WORK)/build-binutils-build
+	touch $(WORK)/build-binutils
 
 $(CLFS)/usr/include/libiberty.h: $(WORK)/build-binutils
 	cd $(WORK)/build-binutils && \
@@ -274,6 +274,36 @@ gcc-final-clean:
 gcc-final-distclean: gcc-final-clean
 	rm -vf $(WORK)/gcc-$(GCC_VERSION).tar.bz2
 
+
+# LIBTOOL
+
+$(WORK)/libtool-$(LIBTOOL_VERSION).tar.xz:
+	wget -P $(WORK) -c http://ftp.gnu.org/gnu/libtool/libtool-$(LIBTOOL_VERSION).tar.xz
+
+$(WORK)/libtool-$(LIBTOOL_VERSION): $(WORK)/libtool-$(LIBTOOL_VERSION).tar.xz
+	tar -C $(WORK) -xvJf $(WORK)/libtool-$(LIBTOOL_VERSION).tar.xz
+	touch $(WORK)/libtool-$(LIBTOOL_VERSION)
+
+$(WORK)/build-libtool: $(WORK)/libtool-$(LIBTOOL_VERSION)
+	mkdir -p $(WORK)/build-libtool
+	touch $(WORK)/build-libtool
+
+$(CROSSTOOLS)/lib/libltdl.so: $(WORK)/build-libtool $(WORK)/libtool-$(LIBTOOL_VERSION)
+	cd $(WORK)/build-libtool && \
+		unset CFLAGS && unset CXXFLAGS && \
+		LDFLAGS="-Wl,-rpath,$(CROSSTOOLS)/lib" && \
+		$(WORK)/libtool-$(LIBTOOL_VERSION)/configure --prefix=$(CROSSTOOLS) \
+		--program-prefix=$(TARGET)- && \
+		make && make install || exit 1
+	touch $(CROSSTOOLS)/lib/libltdl.so
+
+libtool: gcc-final $(CROSSTOOLS)/lib/libltdl.so
+
+libtool-clean:
+	rm -vrf $(WORK)/build-libtool $(WORK)/libtool-$(LIBTOOL_VERSION)
+
+libtool-distclean:
+	rm -vf $(WORK)/libtool-$(LIBTOOL_VERSION).tar.xz
 
 # SETUP FOR PKGUTILS
 $(CLFS)/var/lib/pkg/db:
