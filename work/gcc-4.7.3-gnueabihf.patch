@@ -10,9 +10,9 @@ diff -pruN gcc-4.7.3.orig/gcc/ada/gcc-interface/Makefile.in gcc-4.7.3/gcc/ada/gc
    LIBGNAT_TARGET_PAIRS = \
    a-intnam.ads<a-intnam-linux.ads \
    s-inmaop.adb<s-inmaop-posix.adb \
-diff -pruN gcc-4.7.2.orig/gcc/config/arm/linux-eabi.h gcc-4.7.2/gcc/config/arm/linux-eabi.h
---- gcc-4.7.2.orig/gcc/config/arm/linux-eabi.h 2012-11-26 14:44:44.335493878 +0000
-+++ gcc-4.7.2/gcc/config/arm/linux-eabi.h      2012-11-26 14:55:06.599515067 +0000
+diff -pruN gcc-4.7.3.orig/gcc/config/arm/linux-eabi.h gcc-4.7.3/gcc/config/arm/linux-eabi.h
+--- gcc-4.7.3.orig/gcc/config/arm/linux-eabi.h 2012-11-26 14:44:44.335493878 +0000
++++ gcc-4.7.3/gcc/config/arm/linux-eabi.h      2012-11-26 14:55:06.599515067 +0000
 @@ -62,7 +62,11 @@
  /* Use ld-linux.so.3 so that it will be possible to run "classic"
     GNU/Linux binaries on an EABI system.  */
