@@ -9,6 +9,7 @@ include vars.mk
 all: linux-headers libgmp libmpfr libmpc binutils gcc-static glibc gcc-final libtool setup test
 
 clean: linux-headers-clean libgmp-clean libmpfr-clean libmpc-clean binutils-clean gcc-static-clean glibc-clean gcc-final-clean libtool-clean test-clean
+	rm -rvf $(CROSSTOOLS)/* $(CLFS)/*
 
 distclean: clean linux-headers-distclean libgmp-distclean libmpfr-distclean libmpc-distclean binutils-distclean gcc-static-distclean glibc-distclean gcc-final-distclean libtool-distclean test-distclean
 
@@ -261,7 +262,7 @@ $(CLFS)/lib/gcc: $(WORK)/build-gcc-final $(WORK)/gcc-$(GCC_VERSION)
 		--enable-languages=c,c++ --enable-__cxa_atexit \
 		--enable-threads=posix --disable-libstdcxx-pch --disable-bootstrap --disable-libgomp \
 		--with-mpfr=$(CROSSTOOLS) --with-gmp=$(CROSSTOOLS) --with-mpc=$(CROSSTOOLS) \
-		--with-abi=$(ABI) --with-arch=$(ARCH) --with-mode=$(MODE) --with-float=$(FLOAT) --with-fpu=$(FPU) && \
+		--with-abi=$(ABI) --with-arch=$(ARCH) --with-mode=$(MODE) --with-float=$(FLOAT) && \
 		make AS_FOR_TARGET="$(TARGET)-as" LD_FOR_TARGET="$(TARGET)-ld" && \
 		make install || exit 1
 	touch $(CLFS)/lib/gcc
