@@ -55,7 +55,7 @@ $(CROSSTOOLS)/lib/libgmp.so: $(WORK)/build-libgmp
 	cd $(WORK)/build-libgmp && \
 		unset CFLAGS && unset CXXFLAGS && \
 		CPPFLAGS=-fexceptions \
-		$(WORK)/gmp-$(LIBGMP_VERSION)/configure --prefix=$(CROSSTOOLS) --enable-cxx && \
+		$(WORK)/gmp-$(LIBGMP_VERSION_MIN)/configure --prefix=$(CROSSTOOLS) --enable-cxx && \
 		make && make install || exit 1
 	touch $(CROSSTOOLS)/lib/libgmp.so
 
@@ -202,15 +202,8 @@ gcc-static-distclean: gcc-static-clean
 $(WORK)/glibc-$(GLIBC_VERSION).tar.bz2:
 	wget -P $(WORK) -c ftp://ftp.gnu.org/gnu/glibc/glibc-$(GLIBC_VERSION).tar.bz2
 
-$(WORK)/glibc-ports-$(GLIBC_VERSION).tar.bz2:
-	wget -P $(WORK) -c ftp://ftp.gnu.org/gnu/glibc/glibc-ports-$(GLIBC_VERSION).tar.bz2
-
-$(WORK)/glibc-$(GLIBC_VERSION): $(WORK)/glibc-$(GLIBC_VERSION).tar.bz2 $(WORK)/glibc-ports-$(GLIBC_VERSION).tar.bz2
+$(WORK)/glibc-$(GLIBC_VERSION): $(WORK)/glibc-$(GLIBC_VERSION).tar.bz2
 	tar -C $(WORK) -xvjf $(WORK)/glibc-$(GLIBC_VERSION).tar.bz2
-	cd $(WORK)/glibc-$(GLIBC_VERSION) && \
-		tar xvjf $(WORK)/glibc-ports-$(GLIBC_VERSION).tar.bz2 && \
-		mv glibc-ports-$(GLIBC_VERSION) ports && \
-		sed -e 's/-lgcc_eh//g' -e 's/-lgcc_s//g' -i Makeconfig
 	touch $(WORK)/glibc-$(GLIBC_VERSION)
 
 $(WORK)/build-glibc: $(WORK)/glibc-$(GLIBC_VERSION)
@@ -222,7 +215,6 @@ $(CLFS)/usr/lib/libc.so: $(WORK)/build-glibc $(WORK)/glibc-$(GLIBC_VERSION)
 		export PATH=$(CROSSTOOLS)/bin:$$PATH && \
 		echo "libc_cv_forced_unwind=yes" > config.cache && \
 		echo "libc_cv_c_cleanup=yes" >> config.cache && \
-		echo "libc_cv_gnu89_inline=yes" >> config.cache && \
 		echo "libc_cv_ctors_header=yes" >> config.cache && \
 		echo "install_root=$(CLFS)" > configparms && \
 		unset CFLAGS && unset CXXFLAGS && \
