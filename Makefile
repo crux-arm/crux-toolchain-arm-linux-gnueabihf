@@ -9,7 +9,7 @@ include vars.mk
 all: linux-headers libgmp libmpfr libmpc binutils gcc-static glibc gcc-final setup test
 
 clean: linux-headers-clean libgmp-clean libmpfr-clean libmpc-clean binutils-clean gcc-static-clean glibc-clean gcc-final-clean test-clean
-	rm -rvf $(CROSSTOOLS)/* $(CLFS)/*
+	rm -rvf $(CROSSTOOLS) $(CLFS)
 
 distclean: clean linux-headers-distclean libgmp-distclean libmpfr-distclean libmpc-distclean binutils-distclean gcc-static-distclean glibc-distclean gcc-final-distclean test-distclean
 
@@ -45,6 +45,7 @@ $(WORK)/gmp-$(LIBGMP_VERSION).tar.bz2:
 
 $(WORK)/gmp-$(LIBGMP_VERSION): $(WORK)/gmp-$(LIBGMP_VERSION).tar.bz2
 	tar -C $(WORK) -xvjf $(WORK)/gmp-$(LIBGMP_VERSION).tar.bz2
+	mv `find $(WORK) -type d -name 'gmp-*'` $(WORK)/gmp-$(LIBGMP_VERSION)
 	touch $(WORK)/gmp-$(LIBGMP_VERSION)
 
 $(WORK)/build-libgmp: $(WORK)/gmp-$(LIBGMP_VERSION)
@@ -55,7 +56,7 @@ $(CROSSTOOLS)/lib/libgmp.so: $(WORK)/build-libgmp
 	cd $(WORK)/build-libgmp && \
 		unset CFLAGS && unset CXXFLAGS && \
 		CPPFLAGS=-fexceptions \
-		$(WORK)/gmp-$(LIBGMP_VERSION_MIN)/configure --prefix=$(CROSSTOOLS) --enable-cxx && \
+		$(WORK)/gmp-$(LIBGMP_VERSION)/configure --prefix=$(CROSSTOOLS) --enable-cxx && \
 		make && make install || exit 1
 	touch $(CROSSTOOLS)/lib/libgmp.so
 
