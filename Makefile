@@ -15,11 +15,11 @@ distclean: clean linux-headers-distclean libgmp-distclean libmpfr-distclean libm
 
 
 # LINUX HEADERS
-$(WORK)/linux-$(KERNEL_HEADERS_VERSION).tar.bz2:
-	wget -P $(WORK) -c ftp://ftp.kernel.org/pub/linux/kernel/v3.0/linux-$(KERNEL_HEADERS_VERSION).tar.bz2
+$(WORK)/linux-$(KERNEL_HEADERS_VERSION).tar.xz:
+	wget -P $(WORK) -c ftp://ftp.kernel.org/pub/linux/kernel/v4.x/linux-$(KERNEL_HEADERS_VERSION).tar.xz
 
-$(WORK)/linux-$(KERNEL_HEADERS_VERSION): $(WORK)/linux-$(KERNEL_HEADERS_VERSION).tar.bz2
-	tar -C $(WORK) -xvjf $(WORK)/linux-$(KERNEL_HEADERS_VERSION).tar.bz2
+$(WORK)/linux-$(KERNEL_HEADERS_VERSION): $(WORK)/linux-$(KERNEL_HEADERS_VERSION).tar.xz
+	tar -C $(WORK) -xvf $(WORK)/linux-$(KERNEL_HEADERS_VERSION).tar.xz
 	touch $(WORK)/linux-$(KERNEL_HEADERS_VERSION)
 
 $(CLFS)/usr/include/asm: $(WORK)/linux-$(KERNEL_HEADERS_VERSION)
@@ -36,7 +36,7 @@ linux-headers-clean:
 	rm -vrf $(WORK)/linux-$(KERNEL_HEADERS_VERSION)
 
 linux-headers-distclean: linux-headers-clean
-	rm -vf $(WORK)/linux-$(KERNEL_HEADERS_VERSION).tar.bz2
+	rm -vf $(WORK)/linux-$(KERNEL_HEADERS_VERSION).tar.xz
 
 
 # LIBGMP
@@ -57,7 +57,7 @@ $(CROSSTOOLS)/lib/libgmp.so: $(WORK)/build-libgmp
 		unset CFLAGS && unset CXXFLAGS && \
 		CPPFLAGS=-fexceptions \
 		$(WORK)/gmp-$(LIBGMP_VERSION)/configure --prefix=$(CROSSTOOLS) --enable-cxx && \
-		make && make install || exit 1
+		make $(MJ) && make install || exit 1
 	touch $(CROSSTOOLS)/lib/libgmp.so
 
 libgmp: $(CROSSTOOLS)/lib/libgmp.so
@@ -86,7 +86,7 @@ $(CROSSTOOLS)/lib/libmpfr.so: $(WORK)/build-libmpfr
 		unset CFLAGS && unset CXXFLAGS && \
 		LDFLAGS="-Wl,-rpath,$(CROSSTOOLS)/lib" && \
 		$(WORK)/mpfr-$(LIBMPFR_VERSION)/configure --prefix=$(CROSSTOOLS) --enable-shared --with-gmp=$(CROSSTOOLS) && \
-		make && make install || exit 1
+		make $(MJ) && make install || exit 1
 	touch $(CROSSTOOLS)/lib/libmpfr.so
 
 libmpfr: $(CROSSTOOLS)/lib/libmpfr.so
@@ -116,7 +116,7 @@ $(CROSSTOOLS)/lib/libmpc.so: $(WORK)/build-libmpc
 		LDFLAGS="-Wl,-rpath,$(CROSSTOOLS)/lib" && \
 		$(WORK)/mpc-$(LIBMPC_VERSION)/configure --prefix=$(CROSSTOOLS) \
 		--enable-shared --with-gmp=$(CROSSTOOLS) --with-mpfr=$(CROSSTOOLS) && \
-		make && make install || exit 1
+		make $(MJ) && make install || exit 1
 	touch $(CROSSTOOLS)/lib/libmpc.so
 
 libmpc: $(CROSSTOOLS)/lib/libmpc.so
@@ -148,7 +148,7 @@ $(CLFS)/usr/include/libiberty.h: $(WORK)/build-binutils
 		$(WORK)/binutils-$(BINUTILS_VERSION)/configure --prefix=$(CROSSTOOLS) \
 		--host=$(HOST) --target=$(TARGET) --with-sysroot=$(CLFS) \
 		--disable-nls --enable-shared --disable-multilib --enable-interwork && \
-		make configure-host && make && make install || exit 1
+		make configure-host && make $(MJ) && make install || exit 1
 	cp -va $(WORK)/binutils-$(BINUTILS_VERSION)/include/libiberty.h $(CLFS)/usr/include
 	touch $(CLFS)/usr/include/libiberty.h
 		
@@ -163,12 +163,10 @@ binutils-distclean: binutils-clean
 
 # GCC-STATIC
 $(WORK)/gcc-$(GCC_VERSION).tar.bz2:
-	wget -P $(WORK) -c ftp://sources.redhat.com/pub/gcc/releases/gcc-$(GCC_VERSION)/gcc-$(GCC_VERSION).tar.bz2
+	wget -P $(WORK) -c ftp://gcc.gnu.org/pub/gcc/releases/gcc-$(GCC_VERSION)/gcc-$(GCC_VERSION).tar.bz2
 
-$(WORK)/gcc-$(GCC_VERSION): $(WORK)/gcc-$(GCC_VERSION).tar.bz2 $(WORK)/gcc-$(GCC_VERSION)-gnueabihf.patch
+$(WORK)/gcc-$(GCC_VERSION): $(WORK)/gcc-$(GCC_VERSION).tar.bz2
 	tar -C $(WORK) -xvjf $(WORK)/gcc-$(GCC_VERSION).tar.bz2
-	cd $(WORK)/gcc-$(GCC_VERSION) && \
-		patch -p1 -i $(WORK)/gcc-$(GCC_VERSION)-gnueabihf.patch
 	touch $(WORK)/gcc-$(GCC_VERSION)
 
 $(WORK)/build-gcc-static: $(WORK)/gcc-$(GCC_VERSION)
@@ -187,7 +185,7 @@ $(CROSSTOOLS)/lib/gcc: $(WORK)/build-gcc-static $(WORK)/gcc-$(GCC_VERSION)
 		--with-mpfr=$(CROSSTOOLS) --with-gmp=$(CROSSTOOLS) --with-mpc=$(CROSSTOOLS) \
 		--disable-shared --disable-threads --enable-languages=c --disable-libquadmath \
 		--with-abi=$(ABI) --with-mode=$(MODE) --with-float=$(FLOAT) && \
-		make all-gcc all-target-libgcc && make install-gcc install-target-libgcc || exit 1
+		make $(MJ) all-gcc all-target-libgcc && make install-gcc install-target-libgcc || exit 1
 	touch $(CROSSTOOLS)/lib/gcc
 
 gcc-static: linux-headers libgmp libmpfr binutils $(CROSSTOOLS)/lib/gcc
@@ -215,8 +213,6 @@ $(CLFS)/usr/lib/libc.so: $(WORK)/build-glibc $(WORK)/glibc-$(GLIBC_VERSION)
 	cd $(WORK)/build-glibc && \
 		export PATH=$(CROSSTOOLS)/bin:$$PATH && \
 		echo "libc_cv_forced_unwind=yes" > config.cache && \
-		echo "libc_cv_c_cleanup=yes" >> config.cache && \
-		echo "libc_cv_ctors_header=yes" >> config.cache && \
 		echo "install_root=$(CLFS)" > configparms && \
 		unset CFLAGS && unset CXXFLAGS && \
 		BUILD_CC="gcc" CC="$(TARGET)-gcc" AR="$(TARGET)-ar" \
@@ -226,7 +222,7 @@ $(CLFS)/usr/lib/libc.so: $(WORK)/build-glibc $(WORK)/glibc-$(GLIBC_VERSION)
 		--disable-profile --enable-add-ons --with-tls --enable-kernel=2.6.0 \
 		--with-__thread --with-binutils=$(CROSSTOOLS)/bin --with-fp=yes --enable-obsolete-rpc \
 		--with-headers=$(CLFS)/usr/include --cache-file=config.cache && \
-		make && make install || exit 1
+		make $(MJ) && make install || exit 1
 	touch $(CLFS)/usr/lib/libc.so
 
 glibc: binutils gcc-static $(CLFS)/usr/lib/libc.so
@@ -256,7 +252,7 @@ $(CLFS)/lib/gcc: $(WORK)/build-gcc-final $(WORK)/gcc-$(GCC_VERSION)
 		--enable-threads=posix --disable-libstdcxx-pch --disable-bootstrap --disable-libgomp \
 		--with-mpfr=$(CROSSTOOLS) --with-gmp=$(CROSSTOOLS) --with-mpc=$(CROSSTOOLS) \
 		--with-abi=$(ABI) --with-mode=$(MODE) --with-float=$(FLOAT) && \
-		make AS_FOR_TARGET="$(TARGET)-as" LD_FOR_TARGET="$(TARGET)-ld" && \
+		make $(MJ) AS_FOR_TARGET="$(TARGET)-as" LD_FOR_TARGET="$(TARGET)-ld" && \
 		make install || exit 1
 	touch $(CLFS)/lib/gcc
 		
