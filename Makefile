@@ -249,11 +249,14 @@ $(CLFS)/lib/gcc: $(WORK)/build-gcc-final $(WORK)/gcc-$(GCC_VERSION)
 		--with-headers=$(CLFS)/usr/include --enable-shared  \
 		--disable-multilib --with-sysroot=$(CLFS) --disable-nls \
 		--enable-languages=c,c++ --enable-__cxa_atexit \
-		--enable-threads=posix --disable-libstdcxx-pch --disable-bootstrap --disable-libgomp \
+		--enable-threads=posix --disable-libstdcxx-pch --disable-bootstrap \
+		--disable-libgomp --disable-libssp --disable-libmudflap \
 		--with-mpfr=$(CROSSTOOLS) --with-gmp=$(CROSSTOOLS) --with-mpc=$(CROSSTOOLS) \
 		--with-abi=$(ABI) --with-mode=$(MODE) --with-float=$(FLOAT) && \
 		make $(MJ) AS_FOR_TARGET="$(TARGET)-as" LD_FOR_TARGET="$(TARGET)-ld" && \
 		make install || exit 1
+	cp -va $(WORK)/build-gcc-final/$(TARGET)/libstdc++-v3/src/.libs/libstdc++.so* $(CLFS)/usr/lib
+	cp -va $(WORK)/build-gcc-final/$(TARGET)/libgcc/libgcc_s.so* $(CLFS)/usr/lib
 	touch $(CLFS)/lib/gcc
 		
 gcc-final: libgmp libmpfr glibc $(CLFS)/lib/gcc
