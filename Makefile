@@ -173,10 +173,10 @@ binutils-distclean: binutils-clean
 
 
 # GCC-STATIC
-$(WORK)/gcc-$(GCC_VERSION).tar.bz2:
+$(WORK)/gcc-$(GCC_VERSION).tar.xz:
 	wget -P $(WORK) -c ftp://gcc.gnu.org/pub/gcc/releases/gcc-$(GCC_VERSION)/gcc-$(GCC_VERSION).tar.xz
 
-$(WORK)/gcc-$(GCC_VERSION): $(WORK)/gcc-$(GCC_VERSION).tar.bz2
+$(WORK)/gcc-$(GCC_VERSION): $(WORK)/gcc-$(GCC_VERSION).tar.xz
 	tar -C $(WORK) -xf $(WORK)/gcc-$(GCC_VERSION).tar.xz
 	touch $(WORK)/gcc-$(GCC_VERSION)
 
@@ -276,7 +276,7 @@ gcc-final-clean:
 	rm -rf $(WORK)/build-gcc-final $(WORK)/gcc-$(GCC_VERSION)
 
 gcc-final-distclean: gcc-final-clean
-	rm -f $(WORK)/gcc-$(GCC_VERSION).tar.bz2
+	rm -f $(WORK)/gcc-$(GCC_VERSION).tar.xz
 
 
 # SETUP FOR PKGUTILS-CROSS
