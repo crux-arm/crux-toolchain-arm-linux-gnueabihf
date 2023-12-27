@@ -9,6 +9,7 @@ include vars.mk
 all: linux-headers libgmp libmpfr libmpc binutils gcc-static glibc gcc-final setup test
 
 clean: linux-headers-clean libgmp-clean libmpfr-clean libmpc-clean binutils-clean gcc-static-clean glibc-clean gcc-final-clean test-clean
+	rm -rvf $(CROSSTOOLS)/* $(CLFS)/*
 
 distclean: clean linux-headers-distclean libgmp-distclean libmpfr-distclean libmpc-distclean binutils-distclean gcc-static-distclean glibc-distclean gcc-final-distclean test-distclean
 
@@ -71,10 +72,8 @@ libgmp-distclean: libgmp-clean
 $(WORK)/mpfr-$(LIBMPFR_VERSION).tar.bz2:
 	wget -P $(WORK) -c http://ftp.gnu.org/gnu/mpfr/mpfr-$(LIBMPFR_VERSION).tar.bz2
 
-$(WORK)/mpfr-$(LIBMPFR_VERSION): $(WORK)/mpfr-$(LIBMPFR_VERSION).tar.bz2 $(WORK)/libmpfr-3.1.1-p2.patch.gz
+$(WORK)/mpfr-$(LIBMPFR_VERSION): $(WORK)/mpfr-$(LIBMPFR_VERSION).tar.bz2
 	tar -C $(WORK) -xvjf $(WORK)/mpfr-$(LIBMPFR_VERSION).tar.bz2
-	cd $(WORK)/mpfr-$(LIBMPFR_VERSION) && \
-		gunzip -c $(WORK)/libmpfr-$(LIBMPFR_VERSION)-p2.patch.gz | patch -p1
 	touch $(WORK)/mpfr-$(LIBMPFR_VERSION)
 
 $(WORK)/build-libmpfr: $(WORK)/mpfr-$(LIBMPFR_VERSION)
@@ -133,13 +132,13 @@ $(WORK)/binutils-$(BINUTILS_VERSION).tar.bz2:
 	wget -P $(WORK) -c ftp://ftp.gnu.org/gnu/binutils/binutils-$(BINUTILS_VERSION).tar.bz2
 
 $(WORK)/binutils-$(BINUTILS_VERSION): $(WORK)/binutils-$(BINUTILS_VERSION).tar.bz2
-	tar -C $(WORK) -xvjf $(WORK)/binutils-$(BINUTILS_VERSION).tar.bz2
+	tar -C $(WORK) -xvf $(WORK)/binutils-$(BINUTILS_VERSION).tar.bz2
 	sed -i '/^SUBDIRS/s/doc//' $(WORK)/binutils-$(BINUTILS_VERSION)/*/Makefile.in
 	touch $(WORK)/binutils-$(BINUTILS_VERSION)
 
 $(WORK)/build-binutils: $(WORK)/binutils-$(BINUTILS_VERSION)
 	mkdir -p $(WORK)/build-binutils
-	touch $(WORK)/build-binutils-build
+	touch $(WORK)/build-binutils
 
 $(CLFS)/usr/include/libiberty.h: $(WORK)/build-binutils
 	cd $(WORK)/build-binutils && \
@@ -165,7 +164,7 @@ binutils-distclean: binutils-clean
 $(WORK)/gcc-$(GCC_VERSION).tar.bz2:
 	wget -P $(WORK) -c ftp://sources.redhat.com/pub/gcc/releases/gcc-$(GCC_VERSION)/gcc-$(GCC_VERSION).tar.bz2
 
-$(WORK)/gcc-$(GCC_VERSION): $(WORK)/gcc-$(GCC_VERSION).tar.bz2
+$(WORK)/gcc-$(GCC_VERSION): $(WORK)/gcc-$(GCC_VERSION).tar.bz2 $(WORK)/gcc-$(GCC_VERSION)-gnueabihf.patch
 	tar -C $(WORK) -xvjf $(WORK)/gcc-$(GCC_VERSION).tar.bz2
 	cd $(WORK)/gcc-$(GCC_VERSION) && \
 		patch -p1 -i $(WORK)/gcc-$(GCC_VERSION)-gnueabihf.patch
@@ -186,7 +185,7 @@ $(CROSSTOOLS)/lib/gcc: $(WORK)/build-gcc-static $(WORK)/gcc-$(GCC_VERSION)
 		--disable-libgomp --disable-libmudflap --disable-libssp \
 		--with-mpfr=$(CROSSTOOLS) --with-gmp=$(CROSSTOOLS) --with-mpc=$(CROSSTOOLS) \
 		--disable-shared --disable-threads --enable-languages=c --disable-libquadmath \
-		--with-abi=$(ABI) --with-arch=$(ARCH) --with-mode=$(MODE) --with-float=$(FLOAT) --with-fpu=$(FPU) && \
+		--with-abi=$(ABI) --with-mode=$(MODE) --with-float=$(FLOAT) && \
 		make all-gcc all-target-libgcc && make install-gcc install-target-libgcc || exit 1
 	touch $(CROSSTOOLS)/lib/gcc
 
@@ -232,7 +231,7 @@ $(CLFS)/usr/lib/libc.so: $(WORK)/build-glibc $(WORK)/glibc-$(GLIBC_VERSION)
 		$(WORK)/glibc-$(GLIBC_VERSION)/configure --prefix=/usr \
 		--libexecdir=/usr/lib/glibc --host=$(TARGET) --build=$(HOST) \
 		--disable-profile --enable-add-ons --with-tls --enable-kernel=2.6.0 \
-		--with-__thread --with-binutils=$(CROSSTOOLS)/bin --with-fp=yes \
+		--with-__thread --with-binutils=$(CROSSTOOLS)/bin --with-fp=yes --enable-obsolete-rpc \
 		--with-headers=$(CLFS)/usr/include --cache-file=config.cache && \
 		make && make install || exit 1
 	touch $(CLFS)/usr/lib/libc.so
@@ -263,7 +262,7 @@ $(CLFS)/lib/gcc: $(WORK)/build-gcc-final $(WORK)/gcc-$(GCC_VERSION)
 		--enable-languages=c,c++ --enable-__cxa_atexit \
 		--enable-threads=posix --disable-libstdcxx-pch --disable-bootstrap --disable-libgomp \
 		--with-mpfr=$(CROSSTOOLS) --with-gmp=$(CROSSTOOLS) --with-mpc=$(CROSSTOOLS) \
-		--with-abi=$(ABI) --with-arch=$(ARCH) --with-mode=$(MODE) --with-float=$(FLOAT) --with-fpu=$(FPU) && \
+		--with-abi=$(ABI) --with-mode=$(MODE) --with-float=$(FLOAT) && \
 		make AS_FOR_TARGET="$(TARGET)-as" LD_FOR_TARGET="$(TARGET)-ld" && \
 		make install || exit 1
 	touch $(CLFS)/lib/gcc
@@ -277,12 +276,13 @@ gcc-final-distclean: gcc-final-clean
 	rm -vf $(WORK)/gcc-$(GCC_VERSION).tar.bz2
 
 
-# SETUP FOR PKGUTILS
+# SETUP FOR PKGUTILS-CROSS
 $(CLFS)/var/lib/pkg/db:
 	install -d -m 0755 $(CLFS)/var/lib/pkg
 	touch $(CLFS)/var/lib/pkg/db
 
 setup: $(CLFS)/var/lib/pkg/db
+
 
 # TEST THE TOOLCHAIN
 $(WORK)/test: $(WORK)/test.c
@@ -299,5 +299,6 @@ test-clean:
 	rm -vrf $(WORK)/test
 
 test-distclean: test-clean
+
 
 # End of file
