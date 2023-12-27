@@ -9,7 +9,7 @@ include vars.mk
 all: linux-headers libgmp libmpfr libmpc binutils gcc-static glibc gcc-final setup test
 
 clean: linux-headers-clean libgmp-clean libmpfr-clean libmpc-clean binutils-clean gcc-static-clean glibc-clean gcc-final-clean test-clean
-	rm -rvf $(CROSSTOOLS)/* $(CLFS)/*
+	rm -rvf $(CROSSTOOLS) $(CLFS)
 
 distclean: clean linux-headers-distclean libgmp-distclean libmpfr-distclean libmpc-distclean binutils-distclean gcc-static-distclean glibc-distclean gcc-final-distclean test-distclean
 
@@ -45,6 +45,7 @@ $(WORK)/gmp-$(LIBGMP_VERSION).tar.bz2:
 
 $(WORK)/gmp-$(LIBGMP_VERSION): $(WORK)/gmp-$(LIBGMP_VERSION).tar.bz2
 	tar -C $(WORK) -xvjf $(WORK)/gmp-$(LIBGMP_VERSION).tar.bz2
+	mv `find $(WORK) -type d -name 'gmp-*'` $(WORK)/gmp-$(LIBGMP_VERSION)
 	touch $(WORK)/gmp-$(LIBGMP_VERSION)
 
 $(WORK)/build-libgmp: $(WORK)/gmp-$(LIBGMP_VERSION)
@@ -202,15 +203,8 @@ gcc-static-distclean: gcc-static-clean
 $(WORK)/glibc-$(GLIBC_VERSION).tar.bz2:
 	wget -P $(WORK) -c ftp://ftp.gnu.org/gnu/glibc/glibc-$(GLIBC_VERSION).tar.bz2
 
-$(WORK)/glibc-ports-$(GLIBC_VERSION).tar.bz2:
-	wget -P $(WORK) -c ftp://ftp.gnu.org/gnu/glibc/glibc-ports-$(GLIBC_VERSION).tar.bz2
-
-$(WORK)/glibc-$(GLIBC_VERSION): $(WORK)/glibc-$(GLIBC_VERSION).tar.bz2 $(WORK)/glibc-ports-$(GLIBC_VERSION).tar.bz2
+$(WORK)/glibc-$(GLIBC_VERSION): $(WORK)/glibc-$(GLIBC_VERSION).tar.bz2
 	tar -C $(WORK) -xvjf $(WORK)/glibc-$(GLIBC_VERSION).tar.bz2
-	cd $(WORK)/glibc-$(GLIBC_VERSION) && \
-		tar xvjf $(WORK)/glibc-ports-$(GLIBC_VERSION).tar.bz2 && \
-		mv glibc-ports-$(GLIBC_VERSION) ports && \
-		sed -e 's/-lgcc_eh//g' -e 's/-lgcc_s//g' -i Makeconfig
 	touch $(WORK)/glibc-$(GLIBC_VERSION)
 
 $(WORK)/build-glibc: $(WORK)/glibc-$(GLIBC_VERSION)
@@ -222,7 +216,6 @@ $(CLFS)/usr/lib/libc.so: $(WORK)/build-glibc $(WORK)/glibc-$(GLIBC_VERSION)
 		export PATH=$(CROSSTOOLS)/bin:$$PATH && \
 		echo "libc_cv_forced_unwind=yes" > config.cache && \
 		echo "libc_cv_c_cleanup=yes" >> config.cache && \
-		echo "libc_cv_gnu89_inline=yes" >> config.cache && \
 		echo "libc_cv_ctors_header=yes" >> config.cache && \
 		echo "install_root=$(CLFS)" > configparms && \
 		unset CFLAGS && unset CXXFLAGS && \

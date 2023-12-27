@@ -1,5 +1,9 @@
-To compile the last toolchain just do:
 
-$ git branch 3.0 origin/3.0
-$ git checkout 3.0
+README for toolchain
+
+
+To compile the lastest toolchain:
 $ make
+
+Log to a file would be useful:
+$ make 2>&1 | tee make.log
