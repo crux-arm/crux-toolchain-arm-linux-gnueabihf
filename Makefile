@@ -111,7 +111,7 @@ libmpfr-distclean: libmpfr-clean
 
 # LIBMPC
 $(WORK)/mpc-$(LIBMPC_VERSION).tar.gz:
-	wget -P $(WORK) -c http://www.multiprecision.org/mpc/download/mpc-$(LIBMPC_VERSION).tar.gz
+	wget -P $(WORK) -c https://ftp.gnu.org/gnu/mpc/mpc-$(LIBMPC_VERSION).tar.gz
 
 $(WORK)/mpc-$(LIBMPC_VERSION): $(WORK)/mpc-$(LIBMPC_VERSION).tar.gz
 	tar -C $(WORK) -xzf $(WORK)/mpc-$(LIBMPC_VERSION).tar.gz
@@ -173,11 +173,11 @@ binutils-distclean: binutils-clean
 
 
 # GCC-STATIC
-$(WORK)/gcc-$(GCC_VERSION).tar.bz2:
-	wget -P $(WORK) -c ftp://gcc.gnu.org/pub/gcc/releases/gcc-$(GCC_VERSION)/gcc-$(GCC_VERSION).tar.bz2
+$(WORK)/gcc-$(GCC_VERSION).tar.xz:
+	wget -P $(WORK) -c ftp://gcc.gnu.org/pub/gcc/releases/gcc-$(GCC_VERSION)/gcc-$(GCC_VERSION).tar.xz
 
-$(WORK)/gcc-$(GCC_VERSION): $(WORK)/gcc-$(GCC_VERSION).tar.bz2
-	tar -C $(WORK) -xjf $(WORK)/gcc-$(GCC_VERSION).tar.bz2
+$(WORK)/gcc-$(GCC_VERSION): $(WORK)/gcc-$(GCC_VERSION).tar.xz
+	tar -C $(WORK) -xf $(WORK)/gcc-$(GCC_VERSION).tar.xz
 	touch $(WORK)/gcc-$(GCC_VERSION)
 
 $(WORK)/build-gcc-static: $(WORK)/gcc-$(GCC_VERSION)
@@ -205,7 +205,7 @@ gcc-static-clean:
 	rm -rf $(WORK)/build-gcc-static $(WORK)/gcc-$(GCC_VERSION)
 
 gcc-static-distclean: gcc-static-clean
-	rm -f $(WORK)/gcc-$(GCC_VERSION).tar.bz2
+	rm -f $(WORK)/gcc-$(GCC_VERSION).tar.xz
 
 
 # GLIBC
@@ -276,7 +276,7 @@ gcc-final-clean:
 	rm -rf $(WORK)/build-gcc-final $(WORK)/gcc-$(GCC_VERSION)
 
 gcc-final-distclean: gcc-final-clean
-	rm -f $(WORK)/gcc-$(GCC_VERSION).tar.bz2
+	rm -f $(WORK)/gcc-$(GCC_VERSION).tar.xz
 
 
 # SETUP FOR PKGUTILS-CROSS
