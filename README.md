@@ -1,4 +1,4 @@
-# toolchain-arm-linux-gnu
+# toolchain-arm-linux-gnueabihf
 
 CRUX-ARM Toolchain using hard-float version of the "new" ABI (EABI), targeting
 armv7 and up
