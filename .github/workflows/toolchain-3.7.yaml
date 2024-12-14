@@ -71,14 +71,6 @@ jobs:
           run: |
             make gcc-static -C /opt/arm-linux-gnueabihf
 
-      - name: Build make
-        uses: addnab/docker-run-action@v3
-        with:
-          image: sepen/crux:3.7
-          options: -v ${{ github.workspace }}:/opt/arm-linux-gnueabihf
-          run: |
-            make make -C /opt/arm-linux-gnueabihf
-
       - name: Build glibc
         uses: addnab/docker-run-action@v3
         with:
