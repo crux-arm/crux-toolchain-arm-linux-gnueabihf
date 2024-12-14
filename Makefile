@@ -1,147 +1,220 @@
+# -----------------------------------------------------------------------
 #
 # Makefile
 #
 
+
+CURL_CMD = curl -sSL --retry 5 --retry-max-time 60
+
+ifneq ("$(wildcard vars.mk)", "")
 include vars.mk
+endif
 
-.PHONY: all clean distclean
+all: linux-headers libgmp libmpfr libmpc binutils gcc-static  glibc gcc-final test
 
-all: filesystem linux-headers libgmp libmpfr libmpc binutils gcc-static glibc gcc-final setup test
+.PHONY: clean
+clean: \
+	linux-headers-clean \
+	libgmp-clean \
+	libmpfr-clean \
+	libmpc-clean \
+	binutils-clean \
+	gcc-static-clean \
+	glibc-clean \
+	gcc-final-clean \
+	test-clean
 
-clean: linux-headers-clean libgmp-clean libmpfr-clean libmpc-clean binutils-clean gcc-static-clean glibc-clean gcc-final-clean test-clean
-	rm -rf $(CROSSTOOLS) $(CLFS)
+.PHONY: distclean
+distclean: \
+	clean \
+	linux-headers-distclean \
+	libgmp-distclean \
+	libmpfr-distclean \
+	libmpc-distclean \
+	binutils-distclean \
+	gcc-static-distclean \
+	glibc-distclean \
+	gcc-final-distclean \
+	test-distclean
 
-distclean: clean filesystem-clean linux-headers-distclean libgmp-distclean libmpfr-distclean libmpc-distclean binutils-distclean gcc-static-distclean glibc-distclean gcc-final-distclean test-distclean
+.PHONY: download
+download: \
+	$(WORK)/linux-$(KERNEL_HEADERS_VERSION).tar.gz \
+	$(WORK)/gmp-$(LIBGMP_VERSION).tar.xz \
+	$(WORK)/mpfr-$(LIBMPFR_VERSION).tar.xz \
+	$(WORK)/mpc-$(LIBMPC_VERSION).tar.gz \
+	$(WORK)/binutils-$(BINUTILS_VERSION).tar.bz2 \
+	$(WORK)/gcc-$(GCC_VERSION).tar.xz \
+	$(WORK)/glibc-$(GLIBC_VERSION).tar.bz2 \
 
-# Prepare the filessytem
-$(CLFS)/lib:
-	install -d $(CLFS)/lib
-	ln -s lib $(CLFS)/lib64
-	install -d $(CLFS)/usr/lib
-	ln -s lib $(CLFS)/usr/lib64
-	touch $(CLFS)/lib
+# -----------------------------------------------------------------------
+#
+# linux-headers
+#
 
-filesystem: $(CLFS)/lib
-
-filesystem-clean:
-	rm -rf $(CLFS)/lib* $(CLFS)/usr/lib*
-
-# LINUX HEADERS
 $(WORK)/linux-$(KERNEL_HEADERS_VERSION).tar.xz:
-	wget -P $(WORK) -c https://www.kernel.org/pub/linux/kernel/v4.x/linux-$(KERNEL_HEADERS_VERSION).tar.xz
+	$(CURL_CMD) -o $(WORK)/linux-$(KERNEL_HEADERS_VERSION).tar.xz \
+		https://www.kernel.org/pub/linux/kernel/v5.x/linux-$(KERNEL_HEADERS_VERSION).tar.xz
 
 $(WORK)/linux-$(KERNEL_HEADERS_VERSION): $(WORK)/linux-$(KERNEL_HEADERS_VERSION).tar.xz
 	tar -C $(WORK) -xf $(WORK)/linux-$(KERNEL_HEADERS_VERSION).tar.xz
 	touch $(WORK)/linux-$(KERNEL_HEADERS_VERSION)
 
-$(CLFS)/usr/include/asm: $(WORK)/linux-$(KERNEL_HEADERS_VERSION)
-	mkdir -p $(CLFS)/usr/include
+$(CROSS_SYSROOT)/usr/include/asm: $(WORK)/linux-$(KERNEL_HEADERS_VERSION)
+	@echo "[`date +'%F %T'`] Building linux-headers"
+	mkdir -p $(CROSS_SYSROOT)/usr/include
 	cd $(WORK)/linux-$(KERNEL_HEADERS_VERSION) && \
 		make mrproper && \
-		make ARCH=arm headers_check && \
-		make ARCH=arm INSTALL_HDR_PATH=$(CLFS)/usr headers_install
-	touch $(CLFS)/usr/include/asm
+		make ARCH=arm INSTALL_HDR_PATH=$(CROSS_SYSROOT)/usr headers_install
+	touch $(CROSS_SYSROOT)/usr/include/asm
 
-linux-headers: $(CLFS)/usr/include/asm
+.PHONY: linux-headers
+linux-headers: $(CROSS_SYSROOT)/usr/include/asm
 
+.PHONY: linux-headers-clean
 linux-headers-clean:
 	rm -rf $(WORK)/linux-$(KERNEL_HEADERS_VERSION)
 
+.PHONY: linux-headers-distclean
 linux-headers-distclean: linux-headers-clean
 	rm -f $(WORK)/linux-$(KERNEL_HEADERS_VERSION).tar.xz
 
+# -----------------------------------------------------------------------
+#
+# libgmp
+#
 
-# LIBGMP
-$(WORK)/gmp-$(LIBGMP_VERSION).tar.bz2:
-	wget -P $(WORK) -c ftp://ftp.gnu.org/gnu/gmp/gmp-$(LIBGMP_VERSION).tar.bz2
+$(WORK)/gmp-$(LIBGMP_VERSION).tar.xz:
+	$(CURL_CMD) -o $(WORK)/gmp-$(LIBGMP_VERSION).tar.xz \
+		https://ftp.gnu.org/gnu/gmp/gmp-$(LIBGMP_VERSION).tar.xz
 
-$(WORK)/gmp-$(LIBGMP_VERSION): $(WORK)/gmp-$(LIBGMP_VERSION).tar.bz2
-	tar -C $(WORK) -xjf $(WORK)/gmp-$(LIBGMP_VERSION).tar.bz2
+$(WORK)/gmp-$(LIBGMP_VERSION): $(WORK)/gmp-$(LIBGMP_VERSION).tar.xz
+	tar -C $(WORK) -xvf $(WORK)/gmp-$(LIBGMP_VERSION).tar.xz
 	touch $(WORK)/gmp-$(LIBGMP_VERSION)
 
 $(WORK)/build-libgmp: $(WORK)/gmp-$(LIBGMP_VERSION)
 	mkdir -p $(WORK)/build-libgmp
 	touch $(WORK)/build-libgmp
 
-$(CROSSTOOLS)/lib/libgmp.so: $(WORK)/build-libgmp
+$(CROSS_TOOLS)/lib/libgmp.so: $(WORK)/build-libgmp
+	@echo "[`date +'%F %T'`] Building libgmp"
 	cd $(WORK)/build-libgmp && \
-		unset CFLAGS && unset CXXFLAGS && \
+		unset CFLAGS && \
+		unset CXXFLAGS && \
 		CPPFLAGS=-fexceptions \
-		$(WORK)/gmp-$(LIBGMP_VERSION)/configure --prefix=$(CROSSTOOLS) --enable-cxx && \
-		make $(MJ) && make install || exit 1
-	touch $(CROSSTOOLS)/lib/libgmp.so
+		$(WORK)/gmp-$(LIBGMP_VERSION)/configure \
+			--build=$(CROSS_HOST) \
+			--prefix=$(CROSS_TOOLS) \
+			--enable-cxx && \
+		make $(MAKEFLAGS_PARALLEL) && \
+		make install && \
+		rm -rf $(CROSS_TOOLS)/share
+	touch $(CROSS_TOOLS)/lib/libgmp.so
 
-libgmp: $(CROSSTOOLS)/lib/libgmp.so
+.PHONY: libgmp
+libgmp: $(CROSS_TOOLS)/lib/libgmp.so
 
+.PHONY: libgmp-clean
 libgmp-clean:
 	rm -rf $(WORK)/build-libgmp $(WORK)/gmp-$(LIBGMP_VERSION)
 
+.PHONY: libgmp-distclean
 libgmp-distclean: libgmp-clean
-	rm -rf $(WORK)/gmp-$(LIBGMP_VERSION).tar.bz2
+	rm -rf $(WORK)/gmp-$(LIBGMP_VERSION).tar.xz
 
+# -----------------------------------------------------------------------
+#
+# libmpfr
+#
 
-# LIBMPFR
-$(WORK)/mpfr-$(LIBMPFR_VERSION).tar.bz2:
-	wget -P $(WORK) -c http://ftp.gnu.org/gnu/mpfr/mpfr-$(LIBMPFR_VERSION).tar.bz2
+$(WORK)/mpfr-$(LIBMPFR_VERSION).tar.xz:
+	$(CURL_CMD) -o $(WORK)/mpfr-$(LIBMPFR_VERSION).tar.xz \
+		https://ftp.gnu.org/gnu/mpfr/mpfr-$(LIBMPFR_VERSION).tar.xz
 
-$(WORK)/mpfr-$(LIBMPFR_VERSION): $(WORK)/mpfr-$(LIBMPFR_VERSION).tar.bz2
-	tar -C $(WORK) -xjf $(WORK)/mpfr-$(LIBMPFR_VERSION).tar.bz2
+$(WORK)/mpfr-$(LIBMPFR_VERSION): $(WORK)/mpfr-$(LIBMPFR_VERSION).tar.xz
+	tar -C $(WORK) -xvf $(WORK)/mpfr-$(LIBMPFR_VERSION).tar.xz
 	touch $(WORK)/mpfr-$(LIBMPFR_VERSION)
 
 $(WORK)/build-libmpfr: $(WORK)/mpfr-$(LIBMPFR_VERSION)
 	mkdir -p $(WORK)/build-libmpfr
 	touch $(WORK)/build-libmpfr
 
-$(CROSSTOOLS)/lib/libmpfr.so: $(WORK)/build-libmpfr
+$(CROSS_TOOLS)/lib/libmpfr.so: $(WORK)/build-libmpfr
+	@echo "[`date +'%F %T'`] Building libmpfr"
 	cd $(WORK)/build-libmpfr && \
-		unset CFLAGS && unset CXXFLAGS && \
-		LDFLAGS="-Wl,-rpath,$(CROSSTOOLS)/lib" && \
-		$(WORK)/mpfr-$(LIBMPFR_VERSION)/configure --prefix=$(CROSSTOOLS) --enable-shared --with-gmp=$(CROSSTOOLS) && \
-		make $(MJ) && make install || exit 1
-	touch $(CROSSTOOLS)/lib/libmpfr.so
+		unset CFLAGS && \
+		unset CXXFLAGS && \
+		LDFLAGS="-Wl,-rpath,$(CROSS_TOOLS)/lib" && \
+		$(WORK)/mpfr-$(LIBMPFR_VERSION)/configure \
+			--prefix=$(CROSS_TOOLS) \
+			--enable-shared \
+			--with-gmp=$(CROSS_TOOLS) && \
+		make ${MAKEFLAGS_PARALLEL} && \
+		make install && \
+		rm -rf $(CROSS_TOOLS)/share
+	touch $(CROSS_TOOLS)/lib/libmpfr.so
 
-libmpfr: $(CROSSTOOLS)/lib/libmpfr.so
+.PHONY: libmpfr
+libmpfr: libgmp $(CROSS_TOOLS)/lib/libmpfr.so
 
+.PHONY: libmpfr-clean
 libmpfr-clean:
-	rm -rf $(WORK)/build-libmpfr $(WORK)/mpfr-$(LIBMPFR_VERSION)
+	rm -vrf $(WORK)/build-libmpfr $(WORK)/mpfr-$(LIBMPFR_VERSION)
 
+.PHONY: libmpfr-distclean
 libmpfr-distclean: libmpfr-clean
-	rm -rf $(WORK)/mpfr-$(LIBMPFR_VERSION).tar.bz2
+	rm -vrf $(WORK)/mpfr-$(LIBMPFR_VERSION).tar.xz
 
+# -----------------------------------------------------------------------
+#
+# libmpc
+#
 
-# LIBMPC
 $(WORK)/mpc-$(LIBMPC_VERSION).tar.gz:
-	wget -P $(WORK) -c https://ftp.gnu.org/gnu/mpc/mpc-$(LIBMPC_VERSION).tar.gz
+	$(CURL_CMD) -o $(WORK)/mpc-$(LIBMPC_VERSION).tar.gz \
+		https://ftp.gnu.org/gnu/mpc/mpc-$(LIBMPC_VERSION).tar.gz
 
 $(WORK)/mpc-$(LIBMPC_VERSION): $(WORK)/mpc-$(LIBMPC_VERSION).tar.gz
-	tar -C $(WORK) -xzf $(WORK)/mpc-$(LIBMPC_VERSION).tar.gz
+	tar -C $(WORK) -xvf $(WORK)/mpc-$(LIBMPC_VERSION).tar.gz
 	touch $(WORK)/mpc-$(LIBMPC_VERSION)
 
 $(WORK)/build-libmpc: $(WORK)/mpc-$(LIBMPC_VERSION)
 	mkdir -p $(WORK)/build-libmpc
 	touch $(WORK)/build-libmpc
 
-$(CROSSTOOLS)/lib/libmpc.so: $(WORK)/build-libmpc
+$(CROSS_TOOLS)/lib/libmpc.so: $(WORK)/build-libmpc
+	@echo "[`date +'%F %T'`] Building libmpc"
 	cd $(WORK)/build-libmpc && \
-		unset CFLAGS && unset CXXFLAGS && \
-		LDFLAGS="-Wl,-rpath,$(CROSSTOOLS)/lib" && \
-		$(WORK)/mpc-$(LIBMPC_VERSION)/configure --prefix=$(CROSSTOOLS) \
-		--enable-shared --with-gmp=$(CROSSTOOLS) --with-mpfr=$(CROSSTOOLS) && \
-		make $(MJ) && make install || exit 1
-	touch $(CROSSTOOLS)/lib/libmpc.so
+		unset CFLAGS && \
+		unset CXXFLAGS && \
+		LDFLAGS="-Wl,-rpath,$(CROSS_TOOLS)/lib" && \
+		$(WORK)/mpc-$(LIBMPC_VERSION)/configure \
+			--prefix=$(CROSS_TOOLS) \
+			--with-gmp=$(CROSS_TOOLS) \
+			--with-mpfr=$(CROSS_TOOLS) && \
+		make ${MAKEFLAGS_PARALLEL} && \
+		make install
+	touch $(CROSS_TOOLS)/lib/libmpc.so
 
-libmpc: $(CROSSTOOLS)/lib/libmpc.so
+.PHONY: libmpc
+libmpc: libmpfr $(CROSS_TOOLS)/lib/libmpc.so
 
+.PHONY: libmpc-clean
 libmpc-clean:
-	rm -rf $(WORK)/build-libmpc $(WORK)/mpc-$(LIBMPC_VERSION)
+	rm -vrf $(WORK)/build-libmpc $(WORK)/mpc-$(LIBMPC_VERSION)
 
+.PHONY: libmpc-distclean
 libmpc-distclean: libmpc-clean
-	rm -rf $(WORK)/mpc-$(LIBMPC_VERSION).tar.bz2
+	rm -vrf $(WORK)/mpc-$(LIBMPC_VERSION).tar.gz
 
+# -----------------------------------------------------------------------
+#
+# binutils
+#
 
-# BINUTILS
 $(WORK)/binutils-$(BINUTILS_VERSION).tar.bz2:
-	wget -P $(WORK) -c ftp://ftp.gnu.org/gnu/binutils/binutils-$(BINUTILS_VERSION).tar.bz2
+	$(CURL_CMD) -o $(WORK)/binutils-$(BINUTILS_VERSION).tar.bz2 \
+		https://ftp.gnu.org/gnu/binutils/binutils-$(BINUTILS_VERSION).tar.bz2
 
 $(WORK)/binutils-$(BINUTILS_VERSION): $(WORK)/binutils-$(BINUTILS_VERSION).tar.bz2
 	tar -C $(WORK) -xf $(WORK)/binutils-$(BINUTILS_VERSION).tar.bz2
@@ -152,65 +225,114 @@ $(WORK)/build-binutils: $(WORK)/binutils-$(BINUTILS_VERSION)
 	mkdir -p $(WORK)/build-binutils
 	touch $(WORK)/build-binutils
 
-$(CLFS)/usr/include/libiberty.h: $(WORK)/build-binutils
+$(CROSS_SYSROOT)/usr/include/libiberty.h: $(WORK)/build-binutils
+	@echo "[`date +'%F %T'`] Building binutils"
 	cd $(WORK)/build-binutils && \
-		unset CFLAGS && unset CXXFLAGS && \
-		AR=ar AS=as \
-		$(WORK)/binutils-$(BINUTILS_VERSION)/configure --prefix=$(CROSSTOOLS) \
-		--host=$(HOST) --target=$(TARGET) --with-sysroot=$(CLFS) \
-		--disable-nls --enable-shared --disable-multilib --enable-interwork && \
-		make configure-host && make $(MJ) && make install || exit 1
-	cp -va $(WORK)/binutils-$(BINUTILS_VERSION)/include/libiberty.h $(CLFS)/usr/include
-	touch $(CLFS)/usr/include/libiberty.h
-		
-binutils: linux-headers $(CLFS)/usr/include/libiberty.h
+		unset CFLAGS && \
+		unset CXXFLAGS && \
+		AR=ar \
+		AS=as \
+		$(WORK)/binutils-$(BINUTILS_VERSION)/configure \
+			--target=$(CROSS_TARGET) \
+			--prefix=$(CROSS_TOOLS) \
+			--with-sysroot=$(CROSS_SYSROOT) \
+			--enable-shared \
+			--enable-ld=default \
+			--enable-gold=yes \
+			--disable-nls \
+			--disable-multilib && \
+		sed -e '/^MAKEINFO/s:=.*:= true:' -i Makefile && \
+		make ${MAKEFLAGS_PARALLEL} && \
+		make install && \
+		rm -rf $(CROSS_TOOLS)/share
+	cp -va $(WORK)/binutils-$(BINUTILS_VERSION)/include/libiberty.h $(CROSS_SYSROOT)/usr/include
+	touch $(CROSS_SYSROOT)/usr/include/libiberty.h
 
+.PHONY: binutils
+binutils: linux-headers $(CROSS_SYSROOT)/usr/include/libiberty.h
+
+.PHONY: binutils-clean
 binutils-clean:
 	rm -rf $(WORK)/build-binutils $(WORK)/binutils-$(BINUTILS_VERSION)
 
+.PHONY: binutils-distclean
 binutils-distclean: binutils-clean
 	rm -f $(WORK)/binutils-$(BINUTILS_VERSION).tar.bz2
 
+# -----------------------------------------------------------------------
+#
+# gcc-static
+#
 
-# GCC-STATIC
 $(WORK)/gcc-$(GCC_VERSION).tar.xz:
-	wget -P $(WORK) -c ftp://gcc.gnu.org/pub/gcc/releases/gcc-$(GCC_VERSION)/gcc-$(GCC_VERSION).tar.xz
+	$(CURL_CMD) -o $(WORK)/gcc-$(GCC_VERSION).tar.xz \
+		https://ftp.gnu.org/gnu/gcc/gcc-$(GCC_VERSION)/gcc-$(GCC_VERSION).tar.xz
 
 $(WORK)/gcc-$(GCC_VERSION): $(WORK)/gcc-$(GCC_VERSION).tar.xz
-	tar -C $(WORK) -xf $(WORK)/gcc-$(GCC_VERSION).tar.xz
+	tar -C $(WORK) -xvf $(WORK)/gcc-$(GCC_VERSION).tar.xz
 	touch $(WORK)/gcc-$(GCC_VERSION)
 
 $(WORK)/build-gcc-static: $(WORK)/gcc-$(GCC_VERSION)
 	mkdir -p $(WORK)/build-gcc-static
 	touch $(WORK)/build-gcc-static
 
-$(CROSSTOOLS)/lib/gcc: $(WORK)/build-gcc-static $(WORK)/gcc-$(GCC_VERSION)
+$(CROSS_TOOLS)/lib/gcc: $(WORK)/build-gcc-static $(WORK)/gcc-$(GCC_VERSION)
+	@echo "[`date +'%F %T'`] Building gcc-static"
 	cd $(WORK)/build-gcc-static && \
-		unset CFLAGS && unset CXXFLAGS && \
-		AR=ar LDFLAGS="-Wl,-rpath,$(CROSSTOOLS)/lib" \
-		$(WORK)/gcc-$(GCC_VERSION)/configure --prefix=$(CROSSTOOLS) \
-		--build=$(HOST) --host=$(HOST) --target=$(TARGET) \
-		--disable-multilib --disable-nls \
-		--without-headers --enable-__cxa_atexit --enable-symvers=gnu --disable-decimal-float \
-		--disable-libgomp --disable-libmudflap --disable-libssp \
-		--with-mpfr=$(CROSSTOOLS) --with-gmp=$(CROSSTOOLS) --with-mpc=$(CROSSTOOLS) \
-		--disable-shared --disable-threads --enable-languages=c --disable-libquadmath \
-		--with-abi=$(ABI) --with-mode=$(MODE) --with-float=$(FLOAT) && \
-		make $(MJ) all-gcc all-target-libgcc && make install-gcc install-target-libgcc || exit 1
-	touch $(CROSSTOOLS)/lib/gcc
+		unset CFLAGS && \
+		unset CXXFLAGS && \
+		AR=ar \
+		LDFLAGS="-Wl,-rpath,$(CROSS_TOOLS)/lib" \
+		$(WORK)/gcc-$(GCC_VERSION)/configure \
+			--build=$(CROSS_HOST) \
+			--host=$(CROSS_HOST) \
+			--target=$(CROSS_TARGET) \
+			--prefix=$(CROSS_TOOLS) \
+			--libexecdir=$(CROSS_TOOLS)/lib \
+			--with-pkgversion="CRUX-ARM (armhf)" \
+			--with-sysroot=$(CROSS_SYSROOT) \
+			--with-gmp=$(CROSS_TOOLS) \
+			--with-mpfr=$(CROSS_TOOLS) \
+			--with-mpc=$(CROSS_TOOLS) \
+			--with-abi=aapcs-linux \
+			--with-mode=arm \
+			--with-float=hard \
+			--with-newlib \
+			--without-headers	\
+			--disable-decimal-float \
+			--disable-libgomp \
+			--disable-libmudflap \
+			--disable-libssp \
+			--disable-multilib \
+			--disable-nls \
+			--disable-shared \
+			--disable-threads \
+			--enable-languages=c \
+			--enable-__cxa_atexit \
+			--enable-symvers=gnu && \
+		make $(MAKEFLAGS_PARALLEL) all-gcc all-target-libgcc && \
+		make install-gcc install-target-libgcc
+	touch $(CROSS_TOOLS)/lib/gcc
 
-gcc-static: linux-headers libgmp libmpfr binutils $(CROSSTOOLS)/lib/gcc
+.PHONY: gcc-static
+gcc-static: linux-headers libgmp libmpfr libmpc binutils $(CROSS_TOOLS)/lib/gcc
 
+.PHONY: gcc-static-clean
 gcc-static-clean:
-	rm -rf $(WORK)/build-gcc-static $(WORK)/gcc-$(GCC_VERSION)
+	rm -vrf $(WORK)/build-gcc-static $(WORK)/gcc-$(GCC_VERSION)
 
+.PHONY: gcc-static-distclean
 gcc-static-distclean: gcc-static-clean
-	rm -f $(WORK)/gcc-$(GCC_VERSION).tar.xz
+	rm -vf $(WORK)/gcc-$(GCC_VERSION).tar.xz
 
+# -----------------------------------------------------------------------
+#
+# glibc
+#
 
-# GLIBC
 $(WORK)/glibc-$(GLIBC_VERSION).tar.bz2:
-	wget -P $(WORK) -c ftp://ftp.gnu.org/gnu/glibc/glibc-$(GLIBC_VERSION).tar.bz2
+	$(CURL_CMD) -o $(WORK)/glibc-$(GLIBC_VERSION).tar.bz2  \
+		https://ftp.gnu.org/gnu/glibc/glibc-$(GLIBC_VERSION).tar.bz2
 
 $(WORK)/glibc-$(GLIBC_VERSION): $(WORK)/glibc-$(GLIBC_VERSION).tar.bz2
 	tar -C $(WORK) -xvjf $(WORK)/glibc-$(GLIBC_VERSION).tar.bz2
@@ -220,88 +342,134 @@ $(WORK)/build-glibc: $(WORK)/glibc-$(GLIBC_VERSION)
 	mkdir -p $(WORK)/build-glibc
 	touch $(WORK)/build-glibc
 	
-$(CLFS)/usr/lib/libc.so: $(WORK)/build-glibc $(WORK)/glibc-$(GLIBC_VERSION)
+$(CROSS_SYSROOT)/usr/lib/libc.so: $(WORK)/build-glibc $(WORK)/glibc-$(GLIBC_VERSION)
+	@echo "[`date +'%F %T'`] Building glibc"
 	cd $(WORK)/build-glibc && \
-		export PATH=$(CROSSTOOLS)/bin:$$PATH && \
+		export PATH=$(CROSS_TOOLS)/bin:$$PATH && \
 		echo "libc_cv_forced_unwind=yes" > config.cache && \
-		echo "install_root=$(CLFS)" > configparms && \
-		unset CFLAGS && unset CXXFLAGS && \
-		BUILD_CC="gcc" CC="$(TARGET)-gcc" AR="$(TARGET)-ar" \
-		RANLIB="$(TARGET)-ranlib" \
-		$(WORK)/glibc-$(GLIBC_VERSION)/configure --prefix=/usr \
-		--libexecdir=/usr/lib/glibc --host=$(TARGET) --build=$(HOST) \
-		--disable-profile --enable-add-ons --with-tls --enable-kernel=2.6.0 \
-		--with-__thread --with-binutils=$(CROSSTOOLS)/bin --with-fp=yes --enable-obsolete-rpc \
-		--with-headers=$(CLFS)/usr/include --cache-file=config.cache && \
-		make $(MJ) && make install || exit 1
-	touch $(CLFS)/usr/lib/libc.so
+		echo "install_root=$(CROSS_SYSROOT)" > configparms && \
+		unset CFLAGS && \
+		unset CXXFLAGS && \
+		BUILD_CC="gcc" \
+		CC="$(CROSS_TARGET)-gcc" \
+		CXX="$(CROSS_TARGET)-gcc" \
+		AR="$(CROSS_TARGET)-ar" \
+		RANLIB="$(CROSS_TARGET)-ranlib" \
+		$(WORK)/glibc-$(GLIBC_VERSION)/configure 	\
+			--host=$(CROSS_TARGET) \
+			--build=$(CROSS_HOST) \
+			--prefix=/usr \
+			--disable-profile \
+			--enable-add-ons \
+			--enable-kernel=2.6.0 \
+			--enable-obsolete-rpc \
+			--with-__thread \
+			--with-tls \
+			--with-fp=yes \
+			--with-binutils=$(CROSS_TOOLS)/bin \
+			--with-headers=$(CROSS_SYSROOT)/usr/include \
+			--cache-file=config.cache && \
+		make ${MAKEFLAGS_PARALLEL} && \
+		make install
+	touch $(CROSS_SYSROOT)/usr/lib/libc.so
 
-glibc: binutils gcc-static $(CLFS)/usr/lib/libc.so
+.PHONY: glibc
+glibc: linux-headers binutils gcc-static $(CROSS_SYSROOT)/usr/lib/libc.so
 
+.PHONY: glibc-clean
 glibc-clean:
 	rm -rf $(WORK)/build-glibc $(WORK)/glibc-$(GLIBC_VERSION)
 
+.PHONY: glibc-distclean
 glibc-distclean: glibc-clean
 	rm -f $(WORK)/glibc-$(GLIBC_VERSION).tar.bz2 $(WORK)/glibc-ports-$(GLIBC_VERSION).tar.bz2
 
+# -----------------------------------------------------------------------
+#
+# gcc-final
+#
 
-# GCC-FINAL
 $(WORK)/build-gcc-final: $(WORK)/gcc-$(GCC_VERSION)
 	mkdir -p $(WORK)/build-gcc-final
 	touch $(WORK)/build-gcc-final
 
-$(CLFS)/lib/gcc: $(WORK)/build-gcc-final $(WORK)/gcc-$(GCC_VERSION)
+$(CROSS_SYSROOT)/lib/gcc: $(WORK)/build-gcc-final $(WORK)/gcc-$(GCC_VERSION)
+	@echo "[`date +'%F %T'`] Building gcc-final"
 	cd $(WORK)/build-gcc-final && \
-		export PATH=$$PATH:$(CROSSTOOLS)/bin && \
-		unset CFLAGS && unset CXXFLAGS && unset CC && \
-		AR=ar LDFLAGS="-Wl,-rpath,$(CROSSTOOLS)/lib" \
-		$(WORK)/gcc-$(GCC_VERSION)/configure --prefix=$(CROSSTOOLS) \
-		--build=$(HOST) --host=$(HOST) --target=$(TARGET) \
-		--with-headers=$(CLFS)/usr/include --enable-shared  \
-		--disable-multilib --with-sysroot=$(CLFS) --disable-nls \
-		--enable-languages=c,c++ --enable-__cxa_atexit \
-		--enable-threads=posix --disable-libstdcxx-pch --disable-bootstrap \
-		--disable-libgomp --disable-libssp --disable-libmudflap \
-		--with-mpfr=$(CROSSTOOLS) --with-gmp=$(CROSSTOOLS) --with-mpc=$(CROSSTOOLS) \
-		--with-abi=$(ABI) --with-mode=$(MODE) --with-float=$(FLOAT) && \
-		make $(MJ) AS_FOR_TARGET="$(TARGET)-as" LD_FOR_TARGET="$(TARGET)-ld" && \
+		export PATH=$(CROSS_TOOLS)/bin:$$PATH && \
+		unset CC && \
+		unset CFLAGS && \
+		unset CXXFLAGS && \
+		AR=ar \
+		LDFLAGS="-Wl,-rpath,$(CROSS_TOOLS)/lib" \
+		$(WORK)/gcc-$(GCC_VERSION)/configure \
+			--build=$(CROSS_HOST) \
+			--host=$(CROSS_HOST) \
+			--target=$(CROSS_TARGET) \
+			--prefix=$(CROSS_TOOLS) \
+			--libexecdir=$(CROSS_TOOLS)/lib \
+			--with-pkgversion="CRUX-ARM (armhf)" \
+			--with-sysroot=$(CROSS_SYSROOT) \
+			--with-gmp=$(CROSS_TOOLS) \
+			--with-mpfr=$(CROSS_TOOLS) \
+			--with-mpc=$(CROSS_TOOLS) \
+			--with-abi=aapcs-linux \
+			--with-mode=arm \
+			--with-float=hard \
+			--without-headers \
+			--disable-multilib \
+			--disable-nls \
+			--disable-libgomp \
+			--disable-libmudflap \
+			--disable-libssp \
+			--disable-bootstrap \
+			--disable-libstdcxx-pch \
+			--enable-__cxa_atexit \
+			--enable-languages=c,c++ \
+			--enable-shared  \
+			--enable-threads=posix && \
+		make $(MAKEFLAGS_PARALLEL) AS_FOR_CROSS_TARGET="$(CROSS_TARGET)-as" LD_FOR_CROSS_TARGET="$(CROSS_TARGET)-ld" && \
 		make install || exit 1
-	cp -va $(WORK)/build-gcc-final/$(TARGET)/libstdc++-v3/src/.libs/libstdc++.so* $(CLFS)/usr/lib
-	cp -va $(WORK)/build-gcc-final/$(TARGET)/libgcc/libgcc_s.so* $(CLFS)/usr/lib
-	touch $(CLFS)/lib/gcc
-		
-gcc-final: libgmp libmpfr glibc $(CLFS)/lib/gcc
+	cp -va $(WORK)/build-gcc-final/$(CROSS_TARGET)/libstdc++-v3/src/.libs/libstdc++.so* $(CROSS_SYSROOT)/usr/lib
+	cp -va $(WORK)/build-gcc-final/$(CROSS_TARGET)/libgcc/libgcc_s.so* $(CROSS_SYSROOT)/usr/lib
+	touch $(CROSS_SYSROOT)/lib/gcc
 
+.PHONY: gcc-final
+gcc-final: libgmp libmpfr glibc $(CROSS_SYSROOT)/lib/gcc
+
+.PHONY: gcc-final-clean
 gcc-final-clean:
 	rm -rf $(WORK)/build-gcc-final $(WORK)/gcc-$(GCC_VERSION)
 
+.PHONY: gcc-final-distclean
 gcc-final-distclean: gcc-final-clean
 	rm -f $(WORK)/gcc-$(GCC_VERSION).tar.xz
 
+# -----------------------------------------------------------------------
+#
+# test
+#
 
-# SETUP FOR PKGUTILS-CROSS
-$(CLFS)/var/lib/pkg/db:
-	install -d -m 0755 $(CLFS)/var/lib/pkg
-	touch $(CLFS)/var/lib/pkg/db
-
-setup: $(CLFS)/var/lib/pkg/db
-
-
-# TEST THE TOOLCHAIN
 $(WORK)/test: $(WORK)/test.c
-	export PATH=$$PATH:$(CROSSTOOLS)/bin && \
-	unset CFLAGS && unset CXXFLAGS && unset CC && \
-	AR=ar LDFLAGS="-Wl,-rpath,$(CROSSTOOLS)/lib" \
-	$(TARGET)-gcc -Wall -o $(WORK)/test $(WORK)/test.c
+	@echo "[`date +'%F %T'`] Testing toolchain"
+	export PATH=$(CROSS_TOOLS)/bin:$$PATH && \
+	unset CFLAGS && \
+	unset CXXFLAGS && \
+	unset CC && \
+	AR=ar \
+	LDFLAGS="-Wl,-rpath,$(CROSS_TOOLS)/lib" \
+	$(CROSS_TARGET)-gcc -O2 -pipe -Wall -o $(WORK)/test $(WORK)/test.c
 	[ "`file -b $(WORK)/test | cut -d',' -f2 | sed 's| ||g'`" = "ARM"  ] || exit 1
 	touch $(WORK)/test
 
+.PHONY: test
 test: gcc-final $(WORK)/test
 
+.PHONY: test-clean
 test-clean:
-	rm -rf $(WORK)/test
+	rm -vrf $(WORK)/test
 
+.PHONY: test-distclean
 test-distclean: test-clean
-
 
 # End of file
