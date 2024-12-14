@@ -39,7 +39,7 @@ distclean: \
 
 .PHONY: download
 download: \
-	$(WORK)/linux-$(KERNEL_HEADERS_VERSION).tar.gz \
+	$(WORK)/linux-$(KERNEL_HEADERS_VERSION).tar.xz \
 	$(WORK)/gmp-$(LIBGMP_VERSION).tar.xz \
 	$(WORK)/mpfr-$(LIBMPFR_VERSION).tar.xz \
 	$(WORK)/mpc-$(LIBMPC_VERSION).tar.gz \
