@@ -3,13 +3,13 @@ name: toolchain-3.7
 on:
   push:
     branches:
-      - '3.7'
+      - '3.7-updated'
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 jobs:
   build:
-    name: Build 3.7 toolchain
+    name: Build 3.7-updated toolchain
     runs-on: ubuntu-latest
 
     steps:
@@ -23,7 +23,7 @@ jobs:
       - name: Build linux-headers
         uses: addnab/docker-run-action@v3
         with:
-          image: sepen/crux:3.7
+          image: sepen/crux:3.7-updated
           # Create a bind mount from the current workspace to /opt/arm-linux-gnueabihf
           # github.workspace includes all of the code checked out from our current repo
           # so anything done to this code will then be available to any following step
@@ -34,7 +34,7 @@ jobs:
       - name: Build libgmp
         uses: addnab/docker-run-action@v3
         with:
-          image: sepen/crux:3.7
+          image: sepen/crux:3.7-updated
           options: -v ${{ github.workspace }}:/opt/arm-linux-gnueabihf
           run: |
             make libgmp -C /opt/arm-linux-gnueabihf
@@ -42,7 +42,7 @@ jobs:
       - name : Build libmpfr
         uses: addnab/docker-run-action@v3
         with:
-          image: sepen/crux:3.7
+          image: sepen/crux:3.7-updated
           options: -v ${{ github.workspace }}:/opt/arm-linux-gnueabihf
           run: |
             make libmpfr -C /opt/arm-linux-gnueabihf
@@ -50,7 +50,7 @@ jobs:
       - name : Build libmpc
         uses: addnab/docker-run-action@v3
         with:
-          image: sepen/crux:3.7
+          image: sepen/crux:3.7-updated
           options: -v ${{ github.workspace }}:/opt/arm-linux-gnueabihf
           run: |
             make libmpc -C /opt/arm-linux-gnueabihf
@@ -58,7 +58,7 @@ jobs:
       - name: Build binutils
         uses: addnab/docker-run-action@v3
         with:
-          image: sepen/crux:3.7
+          image: sepen/crux:3.7-updated
           options: -v ${{ github.workspace }}:/opt/arm-linux-gnueabihf
           run: |
             make binutils -C /opt/arm-linux-gnueabihf
@@ -66,7 +66,7 @@ jobs:
       - name: Build gcc-static
         uses: addnab/docker-run-action@v3
         with:
-          image: sepen/crux:3.7
+          image: sepen/crux:3.7-updated
           options: -v ${{ github.workspace }}:/opt/arm-linux-gnueabihf
           run: |
             make gcc-static -C /opt/arm-linux-gnueabihf
@@ -74,7 +74,7 @@ jobs:
       - name: Build glibc
         uses: addnab/docker-run-action@v3
         with:
-          image: sepen/crux:3.7
+          image: sepen/crux:3.7-updated
           options: -v ${{ github.workspace }}:/opt/arm-linux-gnueabihf
           run: |
             make glibc -C /opt/arm-linux-gnueabihf
@@ -82,7 +82,7 @@ jobs:
       - name: Build gcc-final
         uses: addnab/docker-run-action@v3
         with:
-          image: sepen/crux:3.7
+          image: sepen/crux:3.7-updated
           options: -v ${{ github.workspace }}:/opt/arm-linux-gnueabihf
           run: |
             make gcc-final -C /opt/arm-linux-gnueabihf
@@ -90,7 +90,7 @@ jobs:
       - name: Test toolchain
         uses: addnab/docker-run-action@v3
         with:
-          image: sepen/crux:3.7
+          image: sepen/crux:3.7-updated
           options: -v ${{ github.workspace }}:/opt/arm-linux-gnueabihf
           run: |
             make test -C /opt/arm-linux-gnueabihf
@@ -98,11 +98,11 @@ jobs:
       - name: Release toolchain
         uses: addnab/docker-run-action@v3
         with:
-          image: sepen/crux:3.7
+          image: sepen/crux:3.7-updated
           options: -v ${{ github.workspace }}:/opt/arm-linux-gnueabihf
           run: |
             mkdir /opt/arm-linux-gnueabihf/release
-            tar cvJf /opt/arm-linux-gnueabihf/release/crux-toolchain-arm-linux-gnueabihf-3.7-$(date +'%Y%m%d%H%M').tar.xz \
+            tar cvJf /opt/arm-linux-gnueabihf/release/crux-toolchain-arm-linux-gnueabihf-3.7-updated-$(date +'%Y%m%d%H%M').tar.xz \
               /opt/arm-linux-gnueabihf/cross-sysroot /opt/arm-linux-gnueabihf/cross-tools
 
       - name: Upload toolchain
