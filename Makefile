@@ -361,7 +361,7 @@ $(CROSS_SYSROOT)/usr/lib/libc.so: $(WORK)/build-glibc $(WORK)/glibc-$(GLIBC_VERS
 			--prefix=/usr \
 			--disable-profile \
 			--enable-add-ons \
-			--enable-kernel=2.6.0 \
+			--enable-kernel=2.6.32 \
 			--enable-obsolete-rpc \
 			--with-__thread \
 			--with-tls \
