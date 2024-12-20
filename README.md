@@ -1,18 +1,32 @@
 # crux-toolchain-arm-linux-gnueabihf
 
-Build releases can be downloaded from here:
+`arm-linux-gnueabihf` is a cross-compilation toolchain designed for targeting ARM processors running Linux, specifically for systems that support hardware floating-point operations (hard-float).
+It includes tools like the GCC compiler (GNU Compiler Collection) and other utilities for building software that can run on an ARM-based Linux system with hard-float support.
+
+## Download the Toolchain
+
+Toolchain releases can be downloaded from here:
 https://sourceforge.net/projects/crux-arm/files/toolchain/
 
 
 ## Setting Up the Toolchain
 
-1. Extract the tarball to `/opt/arm-linux-gnueabihf`:
+1. Install to `/opt/arm-linux-gnueabihf`
+
+   Once you have download the toolchain (e.g: crux-toolchain-arm-linux-gnueabihf-VERSION.tar.gz) you need to extract it to `/`.
 
    ```bash
-   sudo tar -xzvf crux-toolchain-arm-linux-gnueabihf.VERSION.tar.gz -C /opt/arm-linux-gnueabihf
+   sudo tar -xzvf crux-toolchain-arm-linux-gnueabihf-VERSION.tar.gz -C /
    ```
 
-2. Add the `bin` directory to `PATH`:
+   > When you extract the tarball to `/`, it will install it to `/opt/arm-linux-gnueabihf` due to the prefix in the tarball contents.
+   > The internal `opt/arm-linux-gnueabihf/` directory structure in the tarball is likely there for a reason. Many software packages, especially cross-compilation tools or embedded system libraries, follow this structure to:
+   > - Ensure correct installation: These tools expect to be located in specific directories.
+   > - Avoid conflicts with system directories: By placing the tools in a custom directory.
+
+
+
+3. Add the `bin` directory to `PATH`:
 
    After extracting the toolchain, you need to add the bin directory where cross-tools
    of the toolchain are located to your PATH so you can use the ARM tools from anywhere.
@@ -45,7 +59,7 @@ https://sourceforge.net/projects/crux-arm/files/toolchain/
    arm-linux-gnueabihf-ld --version
    ```
 
-6. Using the Toolchain
+## Using the Toolchain
 
    Now your ARM toolchain should be set up correctly, and you can use it to
    cross-compile for ARM architectures. For example, to compile a C program, run:
